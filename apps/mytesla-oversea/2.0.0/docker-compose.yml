@@ -1,0 +1,166 @@
+version: "3"
+
+services:
+  auth-generator:
+    image: docker.coconutcode.cc/httpd:2.4
+    container_name: ${CONTAINER_NAME}-auth-generator
+    restart: "unless-stopped"
+    volumes:
+      - ./data/auth:/auth
+    environment:
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
+    command: >
+      sh -c '
+        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASS" ]; then
+          htpasswd -cb /auth/.htpasswd $$BASIC_AUTH_USER $$BASIC_AUTH_PASS;
+          echo "Basic Auth file created/updated.";
+        else
+          echo "Warning: BASIC_AUTH_USER or BASIC_AUTH_PASS not set. Skipping .htpasswd creation.";
+        fi
+        echo "Initialization complete. Staying alive for the panel...";
+        tail -f /dev/null
+      '
+
+  # Traefik as unified gateway
+  traefik:
+    image: docker.coconutcode.cc/traefik:v3.5.0
+    container_name: ${CONTAINER_NAME}-traefik
+    restart: unless-stopped
+    command:
+      - "--global.sendAnonymousUsage=false"
+      - "--providers.docker"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.tmhttpchallenge.acme.httpchallenge=true"
+      - "--certificatesresolvers.tmhttpchallenge.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.tmhttpchallenge.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.tmhttpchallenge.acme.storage=/etc/acme/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/auth:/auth
+      - ./data/acme:/etc/acme
+    labels:
+      - "traefik.enable=true"
+    depends_on:
+      - auth-generator
+
+  teslamate:
+    image: docker.coconutcode.cc/gococonut/teslamate
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - database
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - VIRTUAL_HOST=${DOMAIN}
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - TZ=${TZ}
+      - CHECK_ORIGIN=true
+    volumes:
+      - ./data/teslamate:/opt/app/import
+    labels:
+      traefik.enable: "true"
+      traefik.port: "4000"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.middlewares.teslamate-auth.basicauth.realm: "teslamate"
+      traefik.http.middlewares.teslamate-auth.basicauth.usersfile: "/auth/.htpasswd"
+      traefik.http.routers.teslamate-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamate-insecure.middlewares: "redirect"
+      traefik.http.routers.teslamate-ws.rule: "Host(`${DOMAIN}`) && Path(`/live/websocket`)"
+      traefik.http.routers.teslamate-ws.entrypoints: "websecure"
+      traefik.http.routers.teslamate-ws.tls: ""
+      traefik.http.routers.teslamate.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamate.middlewares: "teslamate-auth"
+      traefik.http.routers.teslamate.entrypoints: "websecure"
+      traefik.http.routers.teslamate.tls.certresolver: "tmhttpchallenge"
+
+  grafana:
+    image: docker.coconutcode.cc/gococonut/grafana
+    container_name: ${CONTAINER_NAME}-grafana
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=${GRAFANA_PW}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_DEFAULT_LANGUAGE=zh-CN
+      - GF_SERVER_DOMAIN=${DOMAIN}
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    labels:
+      traefik.enable: "true"
+      traefik.port: "3000"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.grafana-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.grafana-insecure.middlewares: "redirect"
+      traefik.http.routers.grafana.rule: "Host(`${DOMAIN}`) && (Path(`/grafana`) || PathPrefix(`/grafana/`))"
+      traefik.http.routers.grafana.entrypoints: "websecure"
+      traefik.http.routers.grafana.tls.certresolver: "tmhttpchallenge"
+
+  teslamateapi:
+    image: docker.coconutcode.cc/mytesla/teslamateapi:latest
+    container_name: ${CONTAINER_NAME}-teslamateapi
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - MQTT_HOST=mosquitto
+      - API_TOKEN=${API_TOKEN}
+    volumes:
+      - ./data/teslamateapi:/opt/app/data
+    labels:
+      traefik.enable: "true"
+      traefik.port: "8080"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.teslamateapi-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamateapi-insecure.middlewares: "redirect"
+      traefik.http.routers.teslamateapi.rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.teslamateapi.entrypoints: "websecure"
+      traefik.http.routers.teslamateapi.tls.certresolver: "tmhttpchallenge"
+
+  database:
+    image: docker.coconutcode.cc/postgres:17
+    container_name: ${CONTAINER_NAME}-database
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${TM_DB_USER}
+      - POSTGRES_PASSWORD=${TM_DB_PASS}
+      - POSTGRES_DB=${TM_DB_NAME}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  mosquitto:
+    image: docker.coconutcode.cc/eclipse-mosquitto:2
+    container_name: ${CONTAINER_NAME}-mosquitto
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network
