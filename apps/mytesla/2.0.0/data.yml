@@ -140,3 +140,31 @@ additionalProperties:
           value: Europe/Berlin
         - label: Asia/Tokyo
           value: Asia/Tokyo
+
+    - default: ""
+      envKey: BAIDU_MAP_AK
+      edit: true
+      label:
+        en: Baidu Map AK (Access Key)
+        zh: 百度地图 AK (访问密钥)
+        zh-Hant: 百度地圖 AK (訪問密鑰)
+      required: false
+      type: text
+      description:
+        en: Optional. Configure for more accurate location information (accurate to community, mall, parking lot, etc.). Default shows street-level accuracy only.
+        zh: 可选配置。配置后可获得更精准的位置信息（精确到小区、商城、停车场等）。默认只能获取到街道级别的精度。
+        zh-Hant: 可選配置。配置後可獲得更精準的位置信息（精確到小區、商城、停車場等）。默認只能獲取到街道級別的精度。
+
+    - default: ""
+      envKey: BAIDU_MAP_SK
+      edit: true
+      label:
+        en: Baidu Map SK (Secret Key)
+        zh: 百度地图 SK (安全密钥)
+        zh-Hant: 百度地圖 SK (安全密鑰)
+      required: false
+      type: password
+      description:
+        en: Optional. Required when using Baidu Map AK for location services.
+        zh: 可选配置。使用百度地图 AK 时需要配置。
+        zh-Hant: 可選配置。使用百度地圖 AK 時需要配置。
