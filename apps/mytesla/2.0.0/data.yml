@@ -56,6 +56,35 @@ additionalProperties:
       rule: paramComplexity
       type: password
 
+    - default: "8080"
+      envKey: PANEL_PORT
+      edit: true
+      label:
+        en: Panel Port
+        zh: 面板端口
+        zh-Hant: 面板端口
+      required: false
+      rule: paramPort
+      type: number
+      description:
+        en: Port for the panel service. Default is 8080.
+        zh: 面板服务端口。默认为 8080。
+        zh-Hant: 面板服務端口。默認為 8080。
+
+    - default: ""
+      envKey: PANEL_NO
+      edit: true
+      label:
+        en: Panel Number
+        zh: 面板编号
+        zh-Hant: 面板編號
+      required: false
+      type: text
+      description:
+        en: Panel identification number.
+        zh: 面板识别编号。
+        zh-Hant: 面板識別編號。
+
     - default: teslamate
       envKey: TM_DB_NAME
       label:
