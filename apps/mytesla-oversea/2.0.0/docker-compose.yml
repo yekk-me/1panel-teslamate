@@ -2,7 +2,7 @@ version: "3"
 
 services:
   auth-generator:
-    image: docker.coconutcode.cc/httpd:2.4
+    image: httpd:2.4
     container_name: ${CONTAINER_NAME}-auth-generator
     restart: "unless-stopped"
     volumes:
@@ -24,7 +24,7 @@ services:
 
   # Traefik as unified gateway
   traefik:
-    image: docker.coconutcode.cc/traefik:v3.5.0
+    image: traefik:v3.5.0
     container_name: ${CONTAINER_NAME}-traefik
     restart: unless-stopped
     command:
@@ -50,7 +50,7 @@ services:
       - auth-generator
 
   teslamate:
-    image: docker.coconutcode.cc/gococonut/teslamate
+    image: gococonut/teslamate
     container_name: ${CONTAINER_NAME}
     restart: unless-stopped
     depends_on:
@@ -87,7 +87,7 @@ services:
       traefik.http.routers.teslamate.tls.certresolver: "tmhttpchallenge"
 
   grafana:
-    image: docker.coconutcode.cc/gococonut/grafana
+    image: gococonut/grafana
     container_name: ${CONTAINER_NAME}-grafana
     restart: unless-stopped
     depends_on:
@@ -118,7 +118,7 @@ services:
       traefik.http.routers.grafana.tls.certresolver: "tmhttpchallenge"
 
   teslamateapi:
-    image: docker.coconutcode.cc/mytesla/teslamateapi:latest
+    image: mytesla/teslamateapi:latest
     container_name: ${CONTAINER_NAME}-teslamateapi
     restart: unless-stopped
     depends_on:
@@ -144,7 +144,7 @@ services:
       traefik.http.routers.teslamateapi.tls.certresolver: "tmhttpchallenge"
 
   database:
-    image: docker.coconutcode.cc/postgres:17
+    image: postgres:17
     container_name: ${CONTAINER_NAME}-database
     restart: unless-stopped
     environment:
@@ -155,7 +155,7 @@ services:
       - ./data/postgres:/var/lib/postgresql/data
 
   mosquitto:
-    image: docker.coconutcode.cc/eclipse-mosquitto:2
+    image: eclipse-mosquitto:2
     container_name: ${CONTAINER_NAME}-mosquitto
     restart: unless-stopped
     command: mosquitto -c /mosquitto-no-auth.conf
