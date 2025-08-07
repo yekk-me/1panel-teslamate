@@ -56,6 +56,23 @@ additionalProperties:
       rule: paramComplexity
       type: password
 
+    - default: "1000"
+      envKey: PANEL_PORT
+      label:
+        en: Panel Port
+        zh: 面板端口
+        zh-Hant: 面板端口
+      required: true
+      type: number
+    - default: "1000"
+      envKey: PANEL_NO
+      label:
+        en: Panel Node
+        zh: 面板节点
+        zh-Hant: 面板節點
+      required: true
+      type: text
+
     - default: teslamate
       envKey: TM_DB_NAME
       label:

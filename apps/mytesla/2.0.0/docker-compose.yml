@@ -115,7 +115,7 @@ services:
       - "traefik.http.routers.grafana.entrypoints=web"
 
   teslamateapi:
-    image: docker.1ms.run/mytesla/teslamateapi:latest
+    image: docker.1ms.run/mytesla/teslamateapi:arm64
     container_name: ${CONTAINER_NAME}-teslamateapi
     restart: unless-stopped
     depends_on:
@@ -128,6 +128,8 @@ services:
       - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
       - MQTT_HOST=mosquitto
       - API_TOKEN=${API_TOKEN}
+      - PANEL_PORT=${PANEL_PORT}
+      - PANEL_NO=${PANEL_NO}
     volumes:
       - ./data/teslamateapi:/opt/app/data
     labels:
@@ -157,5 +159,5 @@ services:
       - ./data/mosquitto/data:/mosquitto/data
 
 networks:
-  default:
-    name: ${CONTAINER_NAME}-network
+  host:
+    external: true
