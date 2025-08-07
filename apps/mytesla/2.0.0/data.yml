@@ -168,3 +168,23 @@ additionalProperties:
         en: Optional. Required when using Baidu Map AK for location services.
         zh: 可选配置。使用百度地图 AK 时需要配置。
         zh-Hant: 可選配置。使用百度地圖 AK 時需要配置。
+
+    - default: ""
+      envKey: PANEL_PORT
+      edit: false
+      label:
+        en: Panel Port
+        zh: 面板端口
+        zh-Hant: 面板端口
+      required: false
+      type: text
+
+    - default: ""
+      envKey: PANEL_NO
+      edit: false
+      label:
+        en: Panel Number
+        zh: 面板编号
+        zh-Hant: 面板編號
+      required: false
+      type: text
