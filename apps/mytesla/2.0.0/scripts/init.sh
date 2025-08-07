@@ -18,6 +18,6 @@ chmod -R 755 ./data
 chown -R 472:472 ./data/grafana 2>/dev/null || true
 chown -R 1000:1000 ./data/teslamateapi 2>/dev/null || true
 # 确保 teslamateapi 目录有写入权限
-chmod 775 ./data/teslamateapi 2>/dev/null || true
+chmod 777 ./data/teslamateapi 2>/dev/null || true
 
 echo "Mytesla 初始化完成！"
