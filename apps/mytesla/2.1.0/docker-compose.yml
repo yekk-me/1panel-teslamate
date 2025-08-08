@@ -132,7 +132,7 @@ services:
       - PANEL_NO=${PANEL_NO}
     volumes:
       - ./data/teslamateapi:/opt/app/data
-      - /tmp/current_ip:/opt/app/data/current_ip
+      - /tmp/current_ip:/host/current_ip:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
