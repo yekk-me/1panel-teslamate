@@ -66,8 +66,8 @@ services:
       - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
       - TZ=${TZ}
       - CHECK_ORIGIN=true
-      - BAIDU_MAP_AK=${BAIDU_MAP_AK}
-      - BAIDU_MAP_SK=${BAIDU_MAP_SK}
+      - BD_MAP_AK=${BD_MAP_AK}
+      - BD_MAP_SK=${BD_MAP_SK}
     volumes:
       - ./data/teslamate:/opt/app/import
     labels:

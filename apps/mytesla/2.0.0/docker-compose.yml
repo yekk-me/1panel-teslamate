@@ -69,8 +69,8 @@ services:
       - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
       - TZ=${TZ}
       - CHECK_ORIGIN=true
-      - BAIDU_MAP_AK=${BAIDU_MAP_AK}
-      - BAIDU_MAP_SK=${BAIDU_MAP_SK}
+      - BD_MAP_AK=${BD_MAP_AK}
+      - BD_MAP_SK=${BD_MAP_SK}
     volumes:
       - ./data/teslamate:/opt/app/import
     labels:
@@ -132,6 +132,7 @@ services:
       - PANEL_NO=${PANEL_NO}
     volumes:
       - ./data/teslamateapi:/opt/app/data
+      - /tmp/current_ip:/opt/app/data/current_ip
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
@@ -159,5 +160,5 @@ services:
       - ./data/mosquitto/data:/mosquitto/data
 
 networks:
-  host:
-    external: true
+  default:
+    name: ${CONTAINER_NAME}-network
