@@ -13,10 +13,3 @@ additionalProperties:
   limit: 0
   website: https://github.com/fatedier/frp
   document: https://gofrp.org/docs/
-  envKeys:
-    - FRP_SERVER_ADDR
-    - FRP_SERVER_PORT
-    - PROXY_NAME
-    - LOCAL_IP
-    - LOCAL_PORT
-    - PROXY_TYPE
