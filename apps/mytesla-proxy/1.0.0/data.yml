@@ -1,0 +1,87 @@
+additionalProperties:
+  formFields:
+    - default: "frp.moreve.net"
+      envKey: FRP_SERVER_ADDR
+      edit: true
+      label:
+        en: FRP Server Address
+        zh: FRP 服务器地址
+        zh-Hant: FRP 服務器地址
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: 7000
+      envKey: FRP_SERVER_PORT
+      edit: true
+      label:
+        en: FRP Server Port
+        zh: FRP 服务器端口
+        zh-Hant: FRP 服務器端口
+      required: true
+      rule: paramPort
+      type: number
+
+    - default: "lillucas"
+      envKey: PROXY_NAME
+      edit: true
+      label:
+        en: Proxy Name (subdomain prefix)
+        zh: 代理名称 (子域名前缀)
+        zh-Hant: 代理名稱 (子域名前綴)
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: "127.0.0.1"
+      envKey: LOCAL_IP
+      edit: true
+      label:
+        en: Local IP Address
+        zh: 本地 IP 地址
+        zh-Hant: 本地 IP 地址
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: 8080
+      envKey: LOCAL_PORT
+      edit: true
+      label:
+        en: Local Port
+        zh: 本地端口
+        zh-Hant: 本地端口
+      required: true
+      rule: paramPort
+      type: number
+
+    - default: "http"
+      envKey: PROXY_TYPE
+      edit: true
+      label:
+        en: Proxy Type
+        zh: 代理类型
+        zh-Hant: 代理類型
+      required: true
+      type: select
+      values:
+        - label:
+            en: HTTP
+            zh: HTTP
+            zh-Hant: HTTP
+          value: "http"
+        - label:
+            en: HTTPS
+            zh: HTTPS
+            zh-Hant: HTTPS
+          value: "https"
+        - label:
+            en: TCP
+            zh: TCP
+            zh-Hant: TCP
+          value: "tcp"
+        - label:
+            en: UDP
+            zh: UDP
+            zh-Hant: UDP
+          value: "udp"
