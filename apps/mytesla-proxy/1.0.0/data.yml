@@ -65,23 +65,11 @@ additionalProperties:
       required: true
       type: select
       values:
-        - label:
-            en: HTTP
-            zh: HTTP
-            zh-Hant: HTTP
+        - label: HTTP
           value: "http"
-        - label:
-            en: HTTPS
-            zh: HTTPS
-            zh-Hant: HTTPS
+        - label: HTTPS
           value: "https"
-        - label:
-            en: TCP
-            zh: TCP
-            zh-Hant: TCP
+        - label: TCP
           value: "tcp"
-        - label:
-            en: UDP
-            zh: UDP
-            zh-Hant: UDP
+        - label: UDP
           value: "udp"
