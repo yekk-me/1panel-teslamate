@@ -22,7 +22,7 @@ additionalProperties:
       rule: paramPort
       type: number
 
-    - default: "lillucas"
+    - default: "name"
       envKey: PROXY_NAME
       edit: true
       label:
