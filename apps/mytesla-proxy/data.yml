@@ -1,0 +1,15 @@
+additionalProperties:
+  key: mytesla-proxy
+  name: Mytesla Proxy
+  tags:
+    - Tool
+    - Network
+  description:
+    en: FRP client for proxying Mytesla services
+    zh: 用于代理 Mytesla 服务的 FRP 客户端
+    zh-Hant: 用於代理 Mytesla 服務的 FRP 客戶端
+  type: tool
+  crossVersionUpdate: false
+  limit: 0
+  website: https://github.com/fatedier/frp
+  document: https://gofrp.org/docs/
