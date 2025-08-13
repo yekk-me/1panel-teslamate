@@ -130,6 +130,8 @@ services:
       - API_TOKEN=${API_TOKEN}
       - PANEL_PORT=${PANEL_PORT}
       - PANEL_NO=${PANEL_NO}
+    ports:
+      - "8080:8080"
     volumes:
       - ./data/teslamateapi:/opt/app/data
       - /tmp/current_ip:/host/current_ip:ro
