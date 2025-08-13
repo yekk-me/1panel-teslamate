@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# 加载 .env 文件中的环境变量
+if [ -f .env ]; then
+    echo "正在加载环境变量..."
+    set -a
+    source .env
+    set +a
+else
+    echo "错误：找不到 .env 文件"
+    exit 1
+fi
+
 # 创建数据目录
 echo "正在创建数据目录..."
 mkdir -p ./data
