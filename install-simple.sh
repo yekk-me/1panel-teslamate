@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# TeslaMate 自动化部署脚本
-# 支持海外API访问的安全部署方案
+# TeslaMate 简化部署脚本（无nginx版本）
+# 支持 overseas 应用访问
 
 set -e
 
@@ -48,17 +48,15 @@ show_welcome() {
     clear
     echo -e "${GREEN}"
     echo "=================================================="
-    echo "     TeslaMate 安全部署脚本 v1.0"
-    echo "     支持overseas代理的一键部署方案"
+    echo "     TeslaMate 简化部署脚本 v2.0"
+    echo "     支持 overseas 应用的配置方案"
     echo "=================================================="
     echo -e "${NC}"
     echo ""
     print_info "本脚本将帮助您："
     echo "  1. 安装Docker环境"
-    echo "  2. 配置SSL证书（自动续期）"
-    echo "  3. 部署TeslaMate及相关组件"
-    echo "  4. 配置overseas代理支持"
-    echo "  5. 生成安全的访问凭证"
+    echo "  2. 部署TeslaMate及相关组件"
+    echo "  3. 生成安全的访问凭证"
     echo ""
     read -p "按Enter键继续安装..."
 }
@@ -69,44 +67,19 @@ collect_user_input() {
     print_info "请提供以下信息用于配置："
     echo ""
     
-    # 邮箱
-    while true; do
-        read -p "请输入您的邮箱地址（用于SSL证书）: " USER_EMAIL
-        if [[ "$USER_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-            break
-        else
-            print_error "邮箱格式不正确，请重新输入"
-        fi
-    done
-    
-    # 域名
-    while true; do
-        read -p "请输入您的域名（如: teslamate.example.com）: " DOMAIN
-        if [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$ ]]; then
-            break
-        else
-            print_error "域名格式不正确，请重新输入"
-        fi
-    done
-    
     # 时区
     read -p "请输入时区（默认: Asia/Shanghai）: " TIMEZONE
     TIMEZONE=${TIMEZONE:-Asia/Shanghai}
-    
-
     
     # 生成密码
     print_info "生成安全密码..."
     DB_PASSWORD=$(generate_password)
     GRAFANA_PASSWORD=$(generate_password)
-    WEB_PASSWORD=$(generate_password)
     ENCRYPTION_KEY=$(generate_password)
     
     # 显示配置信息
     echo ""
     print_info "配置信息确认："
-    echo "  邮箱: $USER_EMAIL"
-    echo "  域名: $DOMAIN"
     echo "  时区: $TIMEZONE"
     echo ""
     read -p "确认以上信息正确？[Y/n]: " CONFIRM
@@ -157,8 +130,7 @@ install_docker_compose() {
 create_directories() {
     print_info "创建目录结构..."
     
-    mkdir -p /opt/teslamate/{import,grafana/dashboards,postgres}
-    mkdir -p /opt/teslamate/nginx/{conf.d,ssl}
+    mkdir -p /opt/teslamate/{import,grafana-data,postgres-data}
     
     print_success "目录创建完成"
 }
@@ -168,20 +140,18 @@ create_docker_compose() {
     print_info "创建docker-compose配置..."
     
     cat > /opt/teslamate/docker-compose.yml << EOF
-version: '3.8'
+version: "3"
 
 services:
   database:
-    image: postgres:14
+    image: postgres:15
     restart: always
     environment:
       - POSTGRES_USER=teslamate
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=teslamate
     volumes:
-      - ./postgres:/var/lib/postgresql/data
-    networks:
-      - teslamate
+      - ./postgres-data:/var/lib/postgresql/data
 
   teslamate:
     image: teslamate/teslamate:latest
@@ -195,15 +165,12 @@ services:
       - DATABASE_NAME=teslamate
       - DATABASE_HOST=database
       - MQTT_HOST=mosquitto
-      - VIRTUAL_HOST=${DOMAIN}
-      - CHECK_ORIGIN=true
+      - CHECK_ORIGIN=false
       - TZ=${TIMEZONE}
     ports:
       - 4000:4000
     volumes:
       - ./import:/opt/app/import
-    networks:
-      - teslamate
     cap_drop:
       - all
 
@@ -219,48 +186,23 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
       - GF_SECURITY_ADMIN_USER=admin
       - GF_AUTH_BASIC_ENABLED=true
-      - GF_SECURITY_DISABLE_GRAVATAR=true
-      - GF_SECURITY_ALLOW_EMBEDDING=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
       - TZ=${TIMEZONE}
     ports:
       - 3000:3000
     volumes:
-      - teslamate-grafana-data:/var/lib/grafana
-    networks:
-      - teslamate
+      - ./grafana-data:/var/lib/grafana
 
   mosquitto:
     image: eclipse-mosquitto:2
     restart: always
-    ports:
-      - 1883:1883
+    command: mosquitto -c /mosquitto-no-auth.conf
     volumes:
       - mosquitto-conf:/mosquitto/config
       - mosquitto-data:/mosquitto/data
-    networks:
-      - teslamate
-
-  nginx:
-    image: nginx:alpine
-    restart: always
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./nginx/auth:/etc/nginx/auth
-    depends_on:
-      - teslamate
-      - grafana
-    networks:
-      - teslamate
-
-networks:
-  teslamate:
 
 volumes:
-  teslamate-grafana-data:
   mosquitto-conf:
   mosquitto-data:
 EOF
@@ -268,108 +210,20 @@ EOF
     print_success "docker-compose配置创建完成"
 }
 
-# 创建Nginx配置
-create_nginx_config() {
-    print_info "创建Nginx配置..."
+# 配置防火墙
+configure_firewall() {
+    print_info "配置防火墙..."
     
-    # 生成htpasswd文件
-    echo -n 'admin:' > /opt/teslamate/nginx/auth/.htpasswd
-    openssl passwd -apr1 "$WEB_PASSWORD" >> /opt/teslamate/nginx/auth/.htpasswd
-    
-    cat > /opt/teslamate/nginx/conf.d/teslamate.conf << EOF
-upstream teslamate {
-    server teslamate:4000;
-}
-
-upstream grafana {
-    server grafana:3000;
-}
-
-server {
-    listen 80;
-    server_name ${DOMAIN};
-    return 301 https://\$server_name\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name ${DOMAIN};
-
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-
-    # 安全头
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-
-    # TeslaMate
-    location / {
-        proxy_pass http://teslamate;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-
-        # WebSocket支持
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        # 基础认证
-        auth_basic "TeslaMate";
-        auth_basic_user_file /etc/nginx/auth/.htpasswd;
-    }
-
-    # Grafana
-    location /grafana/ {
-        proxy_pass http://grafana/;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
-
-    print_success "Nginx配置创建完成"
-}
-
-# 配置SSL证书
-setup_ssl() {
-    print_info "配置SSL证书..."
-    
-    # 安装certbot
-    apt-get update
-    apt-get install -y certbot
-    
-    # 停止可能占用80端口的服务
-    systemctl stop nginx 2>/dev/null || true
-    systemctl stop apache2 2>/dev/null || true
-    
-    # 获取证书
-    certbot certonly --standalone \
-        --non-interactive \
-        --agree-tos \
-        --email "$USER_EMAIL" \
-        -d "$DOMAIN"
-    
-    # 复制证书
-    cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem /opt/teslamate/nginx/ssl/
-    cp /etc/letsencrypt/live/$DOMAIN/privkey.pem /opt/teslamate/nginx/ssl/
-    chmod 644 /opt/teslamate/nginx/ssl/*
-    
-    # 设置自动续期
-    cat > /etc/cron.d/certbot-renew << EOF
-0 2 * * * root certbot renew --quiet --post-hook "cp /etc/letsencrypt/live/$DOMAIN/*.pem /opt/teslamate/nginx/ssl/ && docker-compose -f /opt/teslamate/docker-compose.yml restart nginx"
-EOF
-    
-    print_success "SSL证书配置完成"
+    # 检查是否安装了ufw
+    if command -v ufw &> /dev/null; then
+        ufw allow 4000/tcp comment 'TeslaMate'
+        ufw allow 3000/tcp comment 'Grafana'
+        print_success "防火墙规则已添加"
+    else
+        print_warning "未检测到ufw防火墙，请手动配置以下端口："
+        echo "  - 4000 (TeslaMate)"
+        echo "  - 3000 (Grafana)"
+    fi
 }
 
 # 启动服务
@@ -394,6 +248,9 @@ start_services() {
 
 # 显示安装信息
 show_installation_info() {
+    # 获取服务器IP
+    SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
+    
     echo ""
     echo -e "${GREEN}=================================================="
     echo "     TeslaMate 安装完成！"
@@ -403,16 +260,20 @@ show_installation_info() {
     print_success "访问信息："
     echo ""
     echo "TeslaMate 主界面:"
-    echo "  地址: https://${DOMAIN}"
-    echo "  用户名: admin"
-    echo "  密码: ${WEB_PASSWORD}"
+    echo "  地址: http://${SERVER_IP}:4000"
+    echo "  首次访问需要配置Tesla账号"
     echo ""
     echo "Grafana 数据面板:"
-    echo "  地址: https://${DOMAIN}/grafana"
+    echo "  地址: http://${SERVER_IP}:3000"
     echo "  用户名: admin"
     echo "  密码: ${GRAFANA_PASSWORD}"
     echo ""
     print_warning "请妥善保存以上信息！"
+    echo ""
+    print_info "安全提示："
+    echo "  1. 建议通过overseas应用访问，确保连接稳定"
+    echo "  2. 请及时修改默认密码"
+    echo "  3. 定期备份数据库"
     echo ""
     echo -e "${BLUE}=================================================="
     echo "     MyTesla - 您的特斯拉好帮手"
@@ -433,8 +294,15 @@ show_installation_info() {
     echo "  iOS: App Store 搜索 'MyTesla'"
     echo "  Android: Google Play 搜索 'MyTesla'"
     echo ""
-    print_info "配置文件位置: /opt/teslamate/"
-    print_info "查看日志: cd /opt/teslamate && docker-compose logs -f"
+    print_info "重要文件位置："
+    echo "  配置文件: /opt/teslamate/docker-compose.yml"
+    echo "  数据目录: /opt/teslamate/"
+    echo ""
+    print_info "常用命令："
+    echo "  查看日志: cd /opt/teslamate && docker-compose logs -f"
+    echo "  重启服务: cd /opt/teslamate && docker-compose restart"
+    echo "  更新服务: cd /opt/teslamate && docker-compose pull && docker-compose up -d"
+    echo "  备份数据: cd /opt/teslamate && docker-compose exec database pg_dump -U teslamate teslamate > backup.sql"
     echo ""
 }
 
@@ -447,8 +315,7 @@ main() {
     install_docker_compose
     create_directories
     create_docker_compose
-    create_nginx_config
-    setup_ssl
+    configure_firewall
     start_services
     show_installation_info
 }

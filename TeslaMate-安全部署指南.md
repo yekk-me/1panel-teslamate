@@ -78,19 +78,16 @@
 登录到您的服务器后，执行以下命令即可一键部署TeslaMate：
 
 ```bash
-bash <(curl -sSL https://raw.githubusercontent.com/your-repo/teslamate-deploy/main/install.sh)
+bash <(curl -sSL https://raw.githubusercontent.com/your-repo/teslamate-deploy/main/install-simple.sh)
 ```
 
 脚本将自动完成以下操作：
-1. 安装Docker和Docker Compose
-2. 配置SSL证书（自动续期）
-3. 部署TeslaMate及相关组件
-4. 设置安全的访问密码
-5. 配置overseas代理（用于特斯拉API访问）
+1. 安装Docker和Docker Compose（使用国内镜像源）
+2. 部署TeslaMate及相关组件
+3. 生成安全的访问密码
+4. 配置防火墙规则
 
 ### 部署过程中需要输入的信息
-- 您的邮箱地址（用于SSL证书）
-- 您的域名（如：teslamate.example.com）
 - 时区设置（默认：Asia/Shanghai）
 
 ## 访问使用
@@ -98,19 +95,25 @@ bash <(curl -sSL https://raw.githubusercontent.com/your-repo/teslamate-deploy/ma
 部署完成后，您可以通过以下地址访问：
 
 ### TeslaMate主界面
-- 地址：`https://您的域名`
-- 用户名：在部署时自动生成
-- 密码：在部署时自动生成
+- 地址：`http://服务器IP:4000`
+- 首次访问需要配置Tesla账号
 
 ### Grafana数据面板
-- 地址：`https://您的域名:3000`
+- 地址：`http://服务器IP:3000`
 - 用户名：admin
 - 密码：在部署时自动生成
+
+### 通过Overseas应用访问
+为了获得更好的访问体验和稳定性，建议使用overseas应用访问：
+1. 在overseas应用中配置服务器地址
+2. 使用内网穿透功能安全访问
+3. 享受更快的访问速度
 
 ### 重要提示
 - 所有密码都会在部署完成后显示，请妥善保存
 - 建议首次登录后修改默认密码
 - 定期备份数据库
+- 如需HTTPS访问，可后续配置域名和SSL证书
 
 ## MyTesla介绍
 
