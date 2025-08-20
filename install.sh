@@ -93,16 +93,7 @@ collect_user_input() {
     read -p "请输入时区（默认: Asia/Shanghai）: " TIMEZONE
     TIMEZONE=${TIMEZONE:-Asia/Shanghai}
     
-    # overseas代理配置
-    echo ""
-    print_info "配置overseas代理（用于访问特斯拉API）"
-    read -p "是否需要配置overseas代理？[Y/n]: " USE_PROXY
-    USE_PROXY=${USE_PROXY:-Y}
-    
-    if [[ "$USE_PROXY" =~ ^[Yy]$ ]]; then
-        read -p "请输入代理地址（默认: socks5://127.0.0.1:1080）: " PROXY_URL
-        PROXY_URL=${PROXY_URL:-socks5://127.0.0.1:1080}
-    fi
+
     
     # 生成密码
     print_info "生成安全密码..."
@@ -117,9 +108,6 @@ collect_user_input() {
     echo "  邮箱: $USER_EMAIL"
     echo "  域名: $DOMAIN"
     echo "  时区: $TIMEZONE"
-    if [[ "$USE_PROXY" =~ ^[Yy]$ ]]; then
-        echo "  代理: $PROXY_URL"
-    fi
     echo ""
     read -p "确认以上信息正确？[Y/n]: " CONFIRM
     CONFIRM=${CONFIRM:-Y}
@@ -210,18 +198,6 @@ services:
       - VIRTUAL_HOST=${DOMAIN}
       - CHECK_ORIGIN=true
       - TZ=${TIMEZONE}
-EOF
-
-    # 添加代理配置
-    if [[ "$USE_PROXY" =~ ^[Yy]$ ]]; then
-        cat >> /opt/teslamate/docker-compose.yml << EOF
-      - HTTP_PROXY=${PROXY_URL}
-      - HTTPS_PROXY=${PROXY_URL}
-      - NO_PROXY=localhost,127.0.0.1,database,grafana,mosquitto
-EOF
-    fi
-
-    cat >> /opt/teslamate/docker-compose.yml << EOF
     ports:
       - 4000:4000
     volumes:
