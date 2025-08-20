@@ -1,0 +1,67 @@
+version: "3"
+
+services:
+  database:
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_USER=teslamate
+      - POSTGRES_PASSWORD=secret  # 请修改此密码
+      - POSTGRES_DB=teslamate
+    volumes:
+      - teslamate-db:/var/lib/postgresql/data
+
+  teslamate:
+    image: teslamate/teslamate:latest
+    restart: always
+    depends_on:
+      - database
+    environment:
+      - ENCRYPTION_KEY=secret_key  # 请修改此密钥
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=secret  # 与上面的数据库密码保持一致
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - CHECK_ORIGIN=false
+      - TZ=Asia/Shanghai  # 时区设置
+    ports:
+      - 4000:4000
+    volumes:
+      - ./import:/opt/app/import
+    cap_drop:
+      - all
+
+  grafana:
+    image: teslamate/grafana:latest
+    restart: always
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=secret  # 与上面的数据库密码保持一致
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=admin  # Grafana管理员密码，请修改
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # 请修改此密码
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_AUTH_BASIC_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
+      - TZ=Asia/Shanghai
+    ports:
+      - 3000:3000
+    volumes:
+      - teslamate-grafana-data:/var/lib/grafana
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: always
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - mosquitto-conf:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+
+volumes:
+  teslamate-db:
+  teslamate-grafana-data:
+  mosquitto-conf:
+  mosquitto-data:
