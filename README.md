@@ -38,7 +38,8 @@
 ├── TeslaMate-部署指南.md      # 完整部署指南
 ├── DNS配置指南.md            # DNS 解析配置教程
 ├── 使用指南.md               # 使用说明和 MyTesla 推荐
-└── install.sh               # 一键安装脚本
+├── install.sh               # 一键安装脚本
+└── teslamate-manager.sh     # TeslaMate 管理脚本
 ```
 
 ## 🚀 快速开始
@@ -72,6 +73,38 @@ bash <(curl -sSL https://raw.githubusercontent.com/your-repo/teslamate-deploy/ma
 
 - 访问 `https://yourdomain.com` 使用 TeslaMate
 - 下载 MyTesla 应用获得更好体验
+- 使用管理脚本快速管理服务
+
+## 🎛️ 服务管理
+
+安装完成后，您可以使用以下方式管理 TeslaMate：
+
+### 使用管理脚本（推荐）
+```bash
+# 下载管理脚本
+curl -O https://raw.githubusercontent.com/your-repo/teslamate-deploy/main/teslamate-manager.sh
+chmod +x teslamate-manager.sh
+
+# 交互式管理菜单
+./teslamate-manager.sh
+
+# 快速命令
+./teslamate-manager.sh info      # 显示密码和访问信息
+./teslamate-manager.sh restart   # 重启服务
+./teslamate-manager.sh stop      # 停止服务
+./teslamate-manager.sh start     # 启动服务
+./teslamate-manager.sh logs      # 查看日志
+```
+
+### 使用安装脚本
+```bash
+sudo ./install.sh --info        # 显示安装信息和密码
+sudo ./install.sh --restart     # 重启服务
+sudo ./install.sh --stop        # 停止服务
+sudo ./install.sh --start       # 启动服务
+sudo ./install.sh --backup      # 备份数据
+sudo ./install.sh --restore     # 恢复数据
+```
 
 ## 📋 系统要求
 
@@ -174,14 +207,15 @@ MyTesla 是专为 Tesla 车主打造的移动端应用，与 TeslaMate 完美集
 ### 获取帮助
 
 ```bash
-# 查看服务状态
-cd /opt/teslamate && docker-compose ps
+# 使用管理脚本（推荐）
+./teslamate-manager.sh status    # 查看服务状态
+./teslamate-manager.sh logs      # 查看详细日志
+./teslamate-manager.sh restart   # 重启所有服务
 
-# 查看详细日志
-cd /opt/teslamate && docker-compose logs -f
-
-# 重启所有服务
-cd /opt/teslamate && docker-compose restart
+# 或直接使用 Docker Compose
+cd /opt/teslamate && docker compose ps
+cd /opt/teslamate && docker compose logs -f
+cd /opt/teslamate && docker compose restart
 ```
 
 ## 📞 技术支持

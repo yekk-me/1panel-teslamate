@@ -77,6 +77,59 @@ install_docker() {
     print_message $GREEN "Docker 安装完成！"
 }
 
+# 显示现有安装信息
+show_existing_info() {
+    PROJECT_DIR="/opt/teslamate"
+    
+    if [[ ! -f "$PROJECT_DIR/.env" ]]; then
+        print_message $RED "未找到现有安装"
+        return 1
+    fi
+    
+    print_title "TeslaMate 安装信息"
+    
+    # 读取配置信息
+    source "$PROJECT_DIR/.env"
+    
+    cat << EOF
+$(print_message $GREEN "🎉 TeslaMate 已安装！")
+
+$(print_message $CYAN "📋 部署信息:")
+• 域名: https://$DOMAIN
+• Grafana: https://$DOMAIN/grafana/
+• 项目目录: $PROJECT_DIR
+
+$(print_message $CYAN "🔐 登录信息:")
+• TeslaMate 用户名: $BASIC_AUTH_USER
+• TeslaMate 密码: $BASIC_AUTH_PASS
+• Grafana 用户名: $GRAFANA_USER
+• Grafana 密码: $GRAFANA_PW
+
+$(print_message $CYAN "🚗 Mytesla UI 登录信息:")
+• 访问地址设置：https://$DOMAIN
+• 访问令牌: $API_TOKEN
+
+$(print_message $CYAN "🛠️ 常用命令:")
+• 查看服务状态: cd $PROJECT_DIR && docker compose ps
+• 查看日志: cd $PROJECT_DIR && docker compose logs -f
+• 重启服务: $0 --restart
+• 停止服务: $0 --stop
+• 启动服务: $0 --start
+
+$(print_message $CYAN "💾 备份和恢复命令:")
+• 备份数据: $0 --backup
+• 恢复数据: $0 --restore
+
+$(print_message $PURPLE "📱 Mytesla UI推荐:")
+• 使用 Mytesla UI 获得更好的使用体验
+• 支持实时监控、数据分析、电池健康度查询、峰谷用电自动计费、提醒等功能
+• https://portal.mytesla.cc
+• https://xhslink.com/m/3iNZ8St7x9J
+
+$(print_message $GREEN "🚗 现在您可以访问 https://$DOMAIN 开始使用 TeslaMate！")
+EOF
+}
+
 # 检查现有安装
 check_existing_installation() {
     PROJECT_DIR="/opt/teslamate"
@@ -95,16 +148,24 @@ check_existing_installation() {
         
         echo
         printf "%b" "${BLUE}选择操作:${NC}\n"
-        printf "%b" "${BLUE}1) 重新安装 (会清除所有数据)${NC}\n"
-        printf "%b" "${BLUE}2) 备份数据${NC}\n"
-        printf "%b" "${BLUE}3) 恢复数据${NC}\n"
-        printf "%b" "${BLUE}4) 退出${NC}\n"
-        printf "%b" "${BLUE}请选择 [1-4]: ${NC}"
+        printf "%b" "${BLUE}1) 显示安装信息和密码${NC}\n"
+        printf "%b" "${BLUE}2) 重新安装 (会清除所有数据)${NC}\n"
+        printf "%b" "${BLUE}3) 备份数据${NC}\n"
+        printf "%b" "${BLUE}4) 恢复数据${NC}\n"
+        printf "%b" "${BLUE}5) 重启服务${NC}\n"
+        printf "%b" "${BLUE}6) 停止服务${NC}\n"
+        printf "%b" "${BLUE}7) 启动服务${NC}\n"
+        printf "%b" "${BLUE}8) 退出${NC}\n"
+        printf "%b" "${BLUE}请选择 [1-8]: ${NC}"
         read -n 1 -r choice
         echo
         
         case $choice in
             1)
+                show_existing_info
+                exit 0
+                ;;
+            2)
                 print_message $YELLOW "您选择了重新安装"
                 printf "%b" "${RED}警告: 这将删除所有现有数据！${NC}\n"
                 printf "%b" "${BLUE}是否继续? [y/N]: ${NC}"
@@ -118,16 +179,28 @@ check_existing_installation() {
                     exit 0
                 fi
                 ;;
-            2)
+            3)
                 backup_data
                 exit 0
                 ;;
-            3)
+            4)
                 restore_data
                 exit 0
                 ;;
-            4)
-                print_message $YELLOW "退出安装"
+            5)
+                restart_services
+                exit 0
+                ;;
+            6)
+                stop_services
+                exit 0
+                ;;
+            7)
+                start_services_only
+                exit 0
+                ;;
+            8)
+                print_message $YELLOW "退出"
                 exit 0
                 ;;
             *)
@@ -203,6 +276,80 @@ backup_data() {
     print_message $GREEN "备份完成！"
     print_message $CYAN "备份文件位置: $BACKUP_DIR/$BACKUP_FILE"
     print_message $YELLOW "请将备份文件复制到安全的位置保存"
+}
+
+# 重启服务
+restart_services() {
+    print_title "重启 TeslaMate 服务"
+    
+    PROJECT_DIR="/opt/teslamate"
+    
+    if [[ ! -f "$PROJECT_DIR/.env" ]]; then
+        print_message $RED "未找到 TeslaMate 安装"
+        exit 1
+    fi
+    
+    cd $PROJECT_DIR
+    
+    print_message $YELLOW "正在重启所有服务..."
+    docker compose restart
+    
+    print_message $GREEN "服务重启完成！"
+    
+    # 显示服务状态
+    print_message $CYAN "当前服务状态:"
+    docker compose ps
+}
+
+# 停止服务
+stop_services() {
+    print_title "停止 TeslaMate 服务"
+    
+    PROJECT_DIR="/opt/teslamate"
+    
+    if [[ ! -f "$PROJECT_DIR/.env" ]]; then
+        print_message $RED "未找到 TeslaMate 安装"
+        exit 1
+    fi
+    
+    cd $PROJECT_DIR
+    
+    print_message $YELLOW "正在停止所有服务..."
+    docker compose stop
+    
+    print_message $GREEN "服务已停止！"
+    
+    # 显示服务状态
+    print_message $CYAN "当前服务状态:"
+    docker compose ps
+}
+
+# 启动服务（仅启动，不重新安装）
+start_services_only() {
+    print_title "启动 TeslaMate 服务"
+    
+    PROJECT_DIR="/opt/teslamate"
+    
+    if [[ ! -f "$PROJECT_DIR/.env" ]]; then
+        print_message $RED "未找到 TeslaMate 安装"
+        exit 1
+    fi
+    
+    cd $PROJECT_DIR
+    
+    print_message $YELLOW "正在启动所有服务..."
+    docker compose up -d
+    
+    print_message $GREEN "服务启动完成！"
+    
+    # 显示服务状态
+    print_message $CYAN "当前服务状态:"
+    docker compose ps
+    
+    # 显示访问信息
+    source "$PROJECT_DIR/.env"
+    echo
+    print_message $GREEN "🚗 您可以访问 https://$DOMAIN 使用 TeslaMate！"
 }
 
 # 恢复数据
@@ -637,19 +784,31 @@ TeslaMate 一键部署脚本
 
 用法:
   $0                安装或重新安装 TeslaMate
+  $0 --info         显示安装信息和密码
   $0 --backup       备份现有数据
   $0 --restore      恢复数据
+  $0 --restart      重启服务
+  $0 --stop         停止服务
+  $0 --start        启动服务
   $0 --help         显示此帮助信息
 
 选项:
+  --info            显示安装信息、密码和访问地址
   --backup          创建数据库备份
   --restore         从备份恢复数据
+  --restart         重启所有服务
+  --stop            停止所有服务
+  --start           启动所有服务
   --help            显示帮助信息
 
 示例:
-  sudo $0                    # 全新安装
+  sudo $0                    # 全新安装或管理现有安装
+  sudo $0 --info             # 显示密码和访问信息
   sudo $0 --backup           # 备份数据
   sudo $0 --restore          # 恢复数据
+  sudo $0 --restart          # 重启服务
+  sudo $0 --stop             # 停止服务
+  sudo $0 --start            # 启动服务
 
 注意:
   - 脚本需要 root 权限运行
@@ -662,6 +821,11 @@ EOF
 main() {
     # 处理命令行参数
     case "${1:-}" in
+        --info)
+            check_root
+            show_existing_info
+            exit 0
+            ;;
         --backup)
             check_root
             backup_data
@@ -670,6 +834,21 @@ main() {
         --restore)
             check_root
             restore_data
+            exit 0
+            ;;
+        --restart)
+            check_root
+            restart_services
+            exit 0
+            ;;
+        --stop)
+            check_root
+            stop_services
+            exit 0
+            ;;
+        --start)
+            check_root
+            start_services_only
             exit 0
             ;;
         --help)
