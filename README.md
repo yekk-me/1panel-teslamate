@@ -1,7 +1,203 @@
-```sh
-git clone -b main https://ghfast.top/https://github.com/yekk-me/1panel-teslamate /opt/1panel/resource/apps/local/1panel-teslamate
+# 🚗 TeslaMate 海外安全部署方案
 
-cp -rf /opt/1panel/resource/apps/local/1panel-teslamate/apps/* /opt/1panel/resource/apps/local/
+> 专为腾讯云海外服务器设计的 TeslaMate 一键部署解决方案
 
-rm -rf /opt/1panel/resource/apps/local/1panel-teslamate
+## 📋 项目简介
+
+本项目提供了一套完整的 TeslaMate 部署方案，专门针对腾讯云海外服务器优化，包含：
+
+- 🛒 服务器和域名购买指南
+- 🔧 一键安装脚本
+- 🌐 DNS 配置教程
+- 📱 MyTesla 应用推荐
+- 🛡️ 安全配置最佳实践
+
+## 🎯 特色功能
+
+### ✨ 一键部署
+- 交互式安装脚本
+- 自动生成安全密码
+- 自动配置 SSL 证书
+- 防火墙安全设置
+
+### 🔐 安全优先
+- Let's Encrypt SSL 证书
+- 强密码自动生成
+- UFW 防火墙配置
+- 数据库安全设置
+
+### 🌍 海外优化
+- 针对腾讯云新加坡节点优化
+- 国内镜像源加速安装
+- Tesla API 访问稳定性优化
+
+## 📂 文件结构
+
 ```
+├── README.md                 # 项目说明
+├── TeslaMate-部署指南.md      # 完整部署指南
+├── DNS配置指南.md            # DNS 解析配置教程
+├── 使用指南.md               # 使用说明和 MyTesla 推荐
+└── install.sh               # 一键安装脚本
+```
+
+## 🚀 快速开始
+
+### 1. 购买服务器
+
+推荐腾讯云新加坡轻量应用服务器：
+- **价格**: 99元/年
+- **配置**: 1核2GB，40GB存储
+- **购买链接**: [腾讯云新春活动](https://cloud.tencent.com/act/pro/warmup202506)
+
+### 2. 购买域名
+
+在腾讯云购买便宜域名（.top、.xyz 等后缀）
+
+### 3. 配置 DNS
+
+参考 `DNS配置指南.md` 配置域名解析
+
+### 4. 一键部署
+
+```bash
+# 连接到您的服务器
+ssh root@your-server-ip
+
+# 运行一键安装脚本
+bash <(curl -sSL https://raw.githubusercontent.com/your-repo/teslamate-deploy/main/install.sh)
+```
+
+### 5. 开始使用
+
+- 访问 `https://yourdomain.com` 使用 TeslaMate
+- 下载 MyTesla 应用获得更好体验
+
+## 📋 系统要求
+
+### 服务器要求
+- **操作系统**: Ubuntu 18.04+ / Debian 9+
+- **CPU**: 1核心以上
+- **内存**: 2GB 以上
+- **存储**: 40GB 以上
+- **网络**: 海外节点，稳定网络连接
+
+### 域名要求
+- 任意顶级域名
+- 已完成实名认证
+- 支持 DNS 解析配置
+
+## 🔧 安装脚本功能
+
+我们的 `install.sh` 脚本提供以下功能：
+
+### 🛠️ 自动化安装
+- ✅ Docker 和 Docker Compose 安装
+- ✅ 系统依赖包安装
+- ✅ 防火墙安全配置
+
+### 🎛️ 交互式配置
+- ✅ 域名和邮箱输入验证
+- ✅ Tesla 账号信息配置
+- ✅ 时区和可选参数设置
+
+### 🔐 安全特性
+- ✅ 自动生成数据库密码（20位）
+- ✅ 自动生成应用密钥（32位）
+- ✅ 自动生成加密密钥（32位）
+- ✅ UFW 防火墙配置
+
+### 📋 服务管理
+- ✅ Docker Compose 服务编排
+- ✅ Let's Encrypt SSL 证书
+- ✅ Nginx 反向代理
+- ✅ 自动服务启动
+
+## 📱 MyTesla 应用
+
+### 🌟 为什么选择 MyTesla？
+
+MyTesla 是专为 Tesla 车主打造的移动端应用，与 TeslaMate 完美集成：
+
+#### 🎯 核心优势
+- **🔄 实时同步**: 与 TeslaMate 数据实时同步
+- **📱 移动优先**: 专为移动设备优化的界面
+- **🔔 智能通知**: 重要事件及时推送
+- **📊 可视化**: 美观的图表和数据展示
+
+#### 🛠️ 主要功能
+- **实时监控**: 电池、位置、充电状态
+- **数据分析**: 行驶记录、能耗分析、充电统计
+- **智能提醒**: 充电完成、异常状态、维护提醒
+- **远程控制**: 空调、门锁、充电控制
+
+#### 📲 下载方式
+- **iOS**: App Store 搜索 "MyTesla"
+- **Android**: Google Play 或应用商店
+- **网页版**: 通过 TeslaMate 域名访问
+
+## 🛡️ 安全最佳实践
+
+### 服务器安全
+1. **定期更新**: 保持系统和应用最新版本
+2. **密码管理**: 使用强密码，定期更换
+3. **访问控制**: 限制不必要的端口开放
+4. **日志监控**: 定期检查访问和错误日志
+
+### 数据安全
+1. **定期备份**: 建议每周备份数据库
+2. **SSL 加密**: 确保所有连接使用 HTTPS
+3. **隐私保护**: 不要分享敏感的车辆数据
+
+## 🔍 故障排除
+
+### 常见问题
+
+1. **无法访问网站**
+   - 检查域名 DNS 解析
+   - 确认防火墙端口开放
+   - 验证 Docker 服务状态
+
+2. **SSL 证书问题**
+   - 确认域名解析生效
+   - 检查 80 端口访问
+   - 重新申请证书
+
+3. **Tesla API 连接失败**
+   - 检查网络连接
+   - 验证 Tesla 账号信息
+   - 查看应用错误日志
+
+### 获取帮助
+
+```bash
+# 查看服务状态
+cd /opt/teslamate && docker-compose ps
+
+# 查看详细日志
+cd /opt/teslamate && docker-compose logs -f
+
+# 重启所有服务
+cd /opt/teslamate && docker-compose restart
+```
+
+## 📞 技术支持
+
+- 📖 **文档**: 查看详细部署指南
+- 🐛 **问题反馈**: GitHub Issues
+- 💬 **社区讨论**: TeslaMate 官方社区
+
+## 🎉 开始您的 Tesla 数据之旅
+
+1. 按照指南购买服务器和域名
+2. 配置 DNS 解析
+3. 运行一键安装脚本
+4. 下载 MyTesla 应用
+5. 开始享受智能化的 Tesla 管理体验！
+
+---
+
+**🚗💨 让科技让您的 Tesla 体验更精彩！**
+
+### 🏷️ 标签
+`Tesla` `TeslaMate` `腾讯云` `Docker` `自动化部署` `数据分析` `MyTesla`
