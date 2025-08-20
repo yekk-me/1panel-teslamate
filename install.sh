@@ -103,11 +103,16 @@ collect_user_input() {
         fi
     done
     
-    # Tesla 账号配置
-    print_message $YELLOW "Tesla 账号配置:"
-    read -p "$(echo -e ${BLUE}请输入您的 Tesla 账号邮箱: ${NC})" TESLA_EMAIL
-    read -s -p "$(echo -e ${BLUE}请输入您的 Tesla 账号密码: ${NC})" TESLA_PASSWORD
+    # 基础认证配置
+    print_message $YELLOW "基础认证配置:"
+    read -p "$(echo -e ${BLUE}请输入 TeslaMate 用户名 (默认: admin): ${NC})" BASIC_AUTH_USER
+    BASIC_AUTH_USER=${BASIC_AUTH_USER:-"admin"}
+    read -s -p "$(echo -e ${BLUE}请输入 TeslaMate 密码 (留空自动生成): ${NC})" BASIC_AUTH_PASS
     echo
+    if [[ -z "$BASIC_AUTH_PASS" ]]; then
+        BASIC_AUTH_PASS=$(generate_password 16)
+        print_message $GREEN "已自动生成密码: $BASIC_AUTH_PASS"
+    fi
     
     # 可选配置
     read -p "$(echo -e ${BLUE}请输入时区 (默认: Asia/Shanghai): ${NC})" TIMEZONE
@@ -115,9 +120,17 @@ collect_user_input() {
     
     # 生成随机密码
     print_message $YELLOW "正在生成安全密码..."
-    DB_PASSWORD=$(generate_password 20)
-    SECRET_KEY=$(generate_password 32)
-    ENCRYPTION_KEY=$(generate_password 32)
+    TM_DB_PASS=$(generate_password 20)
+    TM_ENCRYPTION_KEY=$(generate_password 32)
+    API_TOKEN=$(generate_password 32)
+    GRAFANA_PW=$(generate_password 16)
+    
+    # 可选的百度地图配置
+    print_message $YELLOW "百度地图配置 (可选，用于更精确的位置信息):"
+    read -p "$(echo -e ${BLUE}百度地图 AK (留空跳过): ${NC})" BD_MAP_AK
+    if [[ -n "$BD_MAP_AK" ]]; then
+        read -p "$(echo -e ${BLUE}百度地图 SK: ${NC})" BD_MAP_SK
+    fi
     
     print_message $GREEN "环境变量配置完成！"
 }
@@ -134,142 +147,205 @@ setup_project() {
     # 创建 .env 文件
     cat > .env << EOF
 # 基础配置
+CONTAINER_NAME=teslamate
 DOMAIN=$DOMAIN
 TZ=$TIMEZONE
-CHECK_ORIGIN=false
+
+# 基础认证
+BASIC_AUTH_USER=$BASIC_AUTH_USER
+BASIC_AUTH_PASS=$BASIC_AUTH_PASS
 
 # 数据库配置
-DATABASE_USER=teslamate
-DATABASE_PASS=$DB_PASSWORD
-DATABASE_NAME=teslamate
-DATABASE_HOST=database
+TM_DB_USER=teslamate
+TM_DB_PASS=$TM_DB_PASS
+TM_DB_NAME=teslamate
 
 # 应用配置
-SECRET_KEY_BASE=$SECRET_KEY
-ENCRYPTION_KEY=$ENCRYPTION_KEY
-
-# Tesla 配置
-TESLA_EMAIL=$TESLA_EMAIL
-TESLA_PASSWORD=$TESLA_PASSWORD
+TM_ENCRYPTION_KEY=$TM_ENCRYPTION_KEY
+API_TOKEN=$API_TOKEN
 
 # SSL 配置
 LETSENCRYPT_EMAIL=$EMAIL
 
 # Grafana 配置
-GRAFANA_PASSWD=$DB_PASSWORD
 GRAFANA_USER=admin
+GRAFANA_PW=$GRAFANA_PW
 
-# 可选配置
-DISABLE_MQTT=false
-MQTT_HOST=mosquitto
+# 百度地图配置 (可选)
+BD_MAP_AK=$BD_MAP_AK
+BD_MAP_SK=$BD_MAP_SK
 EOF
 
-    # 创建 docker-compose.yml
+    # 创建 docker-compose.yml (基于 MyTesla-oversea 配置)
     cat > docker-compose.yml << 'EOF'
-version: '3'
+version: "3"
 
 services:
-  teslamate:
-    image: teslamate/teslamate:latest
-    restart: always
+  auth-generator:
+    image: httpd:2.4
+    container_name: ${CONTAINER_NAME}-auth-generator
+    restart: "unless-stopped"
+    volumes:
+      - ./data/auth:/auth
     environment:
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASS=${DATABASE_PASS}
-      - DATABASE_NAME=${DATABASE_NAME}
-      - DATABASE_HOST=${DATABASE_HOST}
-      - MQTT_HOST=${MQTT_HOST}
-      - VIRTUAL_HOST=${DOMAIN}
-      - LETSENCRYPT_HOST=${DOMAIN}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-      - TZ=${TZ}
-      - CHECK_ORIGIN=${CHECK_ORIGIN}
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./import:/opt/app/import
-    cap_drop:
-      - all
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
+    command: >
+      sh -c '
+        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASS" ]; then
+          htpasswd -cb /auth/.htpasswd $$BASIC_AUTH_USER $$BASIC_AUTH_PASS;
+          echo "Basic Auth file created/updated.";
+        else
+          echo "Warning: BASIC_AUTH_USER or BASIC_AUTH_PASS not set. Skipping .htpasswd creation.";
+        fi
+        echo "Initialization complete. Staying alive for the panel...";
+        tail -f /dev/null
+      '
 
-  database:
-    image: postgres:14
-    restart: always
-    environment:
-      - POSTGRES_USER=${DATABASE_USER}
-      - POSTGRES_PASSWORD=${DATABASE_PASS}
-      - POSTGRES_DB=${DATABASE_NAME}
-    volumes:
-      - teslamate-db:/var/lib/postgresql/data
-
-  grafana:
-    image: teslamate/grafana:latest
-    restart: always
-    environment:
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASS=${DATABASE_PASS}
-      - DATABASE_NAME=${DATABASE_NAME}
-      - DATABASE_HOST=${DATABASE_HOST}
-      - GRAFANA_PASSWD=${GRAFANA_PASSWD}
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWD}
-      - GF_AUTH_BASIC_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_SERVER_DOMAIN=${DOMAIN}
-      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - VIRTUAL_HOST=${DOMAIN}
-      - VIRTUAL_PATH=/grafana/
-      - LETSENCRYPT_HOST=${DOMAIN}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-    ports:
-      - "3000:3000"
-    volumes:
-      - teslamate-grafana-data:/var/lib/grafana
-
-  mosquitto:
-    image: eclipse-mosquitto:2
-    restart: always
-    command: mosquitto -c /mosquitto-no-auth.conf
-    ports:
-      - "1883:1883"
-    volumes:
-      - mosquitto-conf:/mosquitto/config
-      - mosquitto-data:/mosquitto/data
-
-  nginx-proxy:
-    image: nginxproxy/nginx-proxy:latest
-    restart: always
+  # Traefik as unified gateway
+  traefik:
+    image: traefik:v3.5.0
+    container_name: ${CONTAINER_NAME}-traefik
+    restart: unless-stopped
+    command:
+      - "--global.sendAnonymousUsage=false"
+      - "--providers.docker"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.tmhttpchallenge.acme.httpchallenge=true"
+      - "--certificatesresolvers.tmhttpchallenge.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.tmhttpchallenge.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.tmhttpchallenge.acme.storage=/etc/acme/acme.json"
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - nginx-certs:/etc/nginx/certs
-      - nginx-vhost:/etc/nginx/vhost.d
-      - nginx-html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/auth:/auth
+      - ./data/acme:/etc/acme
+    labels:
+      - "traefik.enable=true"
+    depends_on:
+      - auth-generator
 
-  letsencrypt:
-    image: nginxproxy/acme-companion:latest
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - nginx-certs:/etc/nginx/certs
-      - nginx-vhost:/etc/nginx/vhost.d
-      - nginx-html:/usr/share/nginx/html
-      - acme-state:/etc/acme.sh
+  teslamate:
+    image: mytesla/teslamate:v2.1
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - database
+      - mosquitto
     environment:
-      - DEFAULT_EMAIL=${LETSENCRYPT_EMAIL}
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - VIRTUAL_HOST=${DOMAIN}
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - TZ=${TZ}
+      - CHECK_ORIGIN=true
+      - BD_MAP_AK=${BD_MAP_AK}
+      - BD_MAP_SK=${BD_MAP_SK}
+    volumes:
+      - ./data/teslamate:/opt/app/import
+    labels:
+      traefik.enable: "true"
+      traefik.port: "4000"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.middlewares.teslamate-auth.basicauth.realm: "teslamate"
+      traefik.http.middlewares.teslamate-auth.basicauth.usersfile: "/auth/.htpasswd"
+      traefik.http.routers.teslamate-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamate-insecure.middlewares: "redirect"
+      traefik.http.routers.teslamate-ws.rule: "Host(`${DOMAIN}`) && Path(`/live/websocket`)"
+      traefik.http.routers.teslamate-ws.entrypoints: "websecure"
+      traefik.http.routers.teslamate-ws.tls: ""
+      traefik.http.routers.teslamate.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamate.middlewares: "teslamate-auth"
+      traefik.http.routers.teslamate.entrypoints: "websecure"
+      traefik.http.routers.teslamate.tls.certresolver: "tmhttpchallenge"
 
-volumes:
-  teslamate-db:
-  teslamate-grafana-data:
-  mosquitto-conf:
-  mosquitto-data:
-  nginx-certs:
-  nginx-vhost:
-  nginx-html:
-  acme-state:
+  grafana:
+    image: mytesla/grafana:v2.1
+    container_name: ${CONTAINER_NAME}-grafana
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=${GRAFANA_PW}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_DEFAULT_LANGUAGE=zh-CN
+      - GF_SERVER_DOMAIN=${DOMAIN}
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    labels:
+      traefik.enable: "true"
+      traefik.port: "3000"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.grafana-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.grafana-insecure.middlewares: "redirect"
+      traefik.http.routers.grafana.rule: "Host(`${DOMAIN}`) && (Path(`/grafana`) || PathPrefix(`/grafana/`))"
+      traefik.http.routers.grafana.entrypoints: "websecure"
+      traefik.http.routers.grafana.tls.certresolver: "tmhttpchallenge"
+
+  teslamateapi:
+    image: mytesla/teslamateapi:latest
+    container_name: ${CONTAINER_NAME}-teslamateapi
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - MQTT_HOST=mosquitto
+      - API_TOKEN=${API_TOKEN}
+    volumes:
+      - ./data/teslamateapi:/opt/app/data
+    labels:
+      traefik.enable: "true"
+      traefik.port: "8080"
+      traefik.http.middlewares.redirect.redirectscheme.scheme: "https"
+      traefik.http.routers.teslamateapi-insecure.rule: "Host(`${DOMAIN}`)"
+      traefik.http.routers.teslamateapi-insecure.middlewares: "redirect"
+      traefik.http.routers.teslamateapi.rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.teslamateapi.entrypoints: "websecure"
+      traefik.http.routers.teslamateapi.tls.certresolver: "tmhttpchallenge"
+
+  database:
+    image: postgres:17
+    container_name: ${CONTAINER_NAME}-database
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${TM_DB_USER}
+      - POSTGRES_PASSWORD=${TM_DB_PASS}
+      - POSTGRES_DB=${TM_DB_NAME}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: ${CONTAINER_NAME}-mosquitto
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network
 EOF
 
     print_message $GREEN "项目文件创建完成！"
@@ -347,8 +423,10 @@ $(print_message $CYAN "📋 部署信息:")
 • 项目目录: $PROJECT_DIR
 
 $(print_message $CYAN "🔐 登录信息:")
+• TeslaMate 用户名: $BASIC_AUTH_USER
+• TeslaMate 密码: $BASIC_AUTH_PASS
 • Grafana 用户名: admin
-• Grafana 密码: $DB_PASSWORD
+• Grafana 密码: $GRAFANA_PW
 
 $(print_message $CYAN "🛠️ 常用命令:")
 • 查看服务状态: cd $PROJECT_DIR && docker-compose ps
