@@ -38,16 +38,14 @@ generate_password() {
     openssl rand -base64 $length | tr -d "=+/" | cut -c1-$length
 }
 
-# 检查是否为 root 用户
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         print_message $RED "错误: 请使用 root 用户运行此脚本"
-        print_message $YELLOW "请使用: sudo su - 切换到 root 用户"
+        print_message $YELLOW "请使用: sudo 执行该脚本"
         exit 1
     fi
 }
 
-# 检查系统兼容性
 check_system() {
     if ! command -v curl &> /dev/null; then
         print_message $YELLOW "正在安装 curl..."
@@ -79,13 +77,208 @@ install_docker() {
     print_message $GREEN "Docker 安装完成！"
 }
 
+# 检查现有安装
+check_existing_installation() {
+    PROJECT_DIR="/opt/teslamate"
+    
+    if [[ -f "$PROJECT_DIR/.env" ]]; then
+        print_message $YELLOW "检测到现有的 TeslaMate 安装"
+        print_message $CYAN "项目目录: $PROJECT_DIR"
+        
+        # 显示现有配置信息
+        if [[ -f "$PROJECT_DIR/.env" ]]; then
+            EXISTING_DOMAIN=$(grep "^DOMAIN=" "$PROJECT_DIR/.env" | cut -d'=' -f2)
+            EXISTING_USER=$(grep "^BASIC_AUTH_USER=" "$PROJECT_DIR/.env" | cut -d'=' -f2)
+            print_message $CYAN "现有域名: $EXISTING_DOMAIN"
+            print_message $CYAN "现有用户: $EXISTING_USER"
+        fi
+        
+        echo
+        printf "%b" "${BLUE}选择操作:${NC}\n"
+        printf "%b" "${BLUE}1) 重新安装 (会清除所有数据)${NC}\n"
+        printf "%b" "${BLUE}2) 备份数据${NC}\n"
+        printf "%b" "${BLUE}3) 恢复数据${NC}\n"
+        printf "%b" "${BLUE}4) 退出${NC}\n"
+        printf "%b" "${BLUE}请选择 [1-4]: ${NC}"
+        read -n 1 -r choice
+        echo
+        
+        case $choice in
+            1)
+                print_message $YELLOW "您选择了重新安装"
+                printf "%b" "${RED}警告: 这将删除所有现有数据！${NC}\n"
+                printf "%b" "${BLUE}是否继续? [y/N]: ${NC}"
+                read -n 1 -r confirm
+                echo
+                if [[ $confirm =~ ^[Yy]$ ]]; then
+                    backup_before_reinstall
+                    return 0  # 继续重新安装
+                else
+                    print_message $YELLOW "取消重新安装"
+                    exit 0
+                fi
+                ;;
+            2)
+                backup_data
+                exit 0
+                ;;
+            3)
+                restore_data
+                exit 0
+                ;;
+            4)
+                print_message $YELLOW "退出安装"
+                exit 0
+                ;;
+            *)
+                print_message $RED "无效选择"
+                exit 1
+                ;;
+        esac
+    fi
+}
+
+# 重新安装前备份
+backup_before_reinstall() {
+    print_message $YELLOW "正在创建重新安装前的备份..."
+    
+    cd $PROJECT_DIR
+    
+    # 检查服务是否运行
+    if docker compose ps | grep -q "Up"; then
+        print_message $YELLOW "正在备份数据库..."
+        BACKUP_FILE="./teslamate_backup_$(date +%Y%m%d_%H%M%S).bck"
+        docker compose exec -T database pg_dump -U teslamate teslamate > "$BACKUP_FILE"
+        print_message $GREEN "数据库备份完成: $BACKUP_FILE"
+        
+        # 移动备份文件到安全位置
+        BACKUP_DIR="/opt/teslamate_backups"
+        mkdir -p "$BACKUP_DIR"
+        mv "$BACKUP_FILE" "$BACKUP_DIR/"
+        print_message $GREEN "备份文件已移动到: $BACKUP_DIR/$(basename $BACKUP_FILE)"
+    fi
+    
+    # 停止并删除服务
+    print_message $YELLOW "正在停止服务..."
+    docker compose down -v
+    
+    # 清理数据目录
+    print_message $YELLOW "正在清理数据目录..."
+    rm -rf data/
+    
+    print_message $GREEN "清理完成，准备重新安装"
+}
+
+# 备份数据
+backup_data() {
+    print_title "备份 TeslaMate 数据"
+    
+    cd $PROJECT_DIR
+    
+    # 检查服务是否运行
+    if ! docker compose ps | grep -q "Up"; then
+        print_message $RED "TeslaMate 服务未运行，请先启动服务"
+        printf "%b" "${BLUE}是否启动服务? [y/N]: ${NC}"
+        read -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            docker compose up -d
+            print_message $YELLOW "等待服务启动..."
+            sleep 30
+        else
+            exit 1
+        fi
+    fi
+    
+    BACKUP_FILE="teslamate_backup_$(date +%Y%m%d_%H%M%S).bck"
+    print_message $YELLOW "正在创建备份: $BACKUP_FILE"
+    
+    docker compose exec -T database pg_dump -U teslamate teslamate > "$BACKUP_FILE"
+    
+    # 创建备份目录并移动文件
+    BACKUP_DIR="/opt/teslamate_backups"
+    mkdir -p "$BACKUP_DIR"
+    mv "$BACKUP_FILE" "$BACKUP_DIR/"
+    
+    print_message $GREEN "备份完成！"
+    print_message $CYAN "备份文件位置: $BACKUP_DIR/$BACKUP_FILE"
+    print_message $YELLOW "请将备份文件复制到安全的位置保存"
+}
+
+# 恢复数据
+restore_data() {
+    print_title "恢复 TeslaMate 数据"
+    
+    cd $PROJECT_DIR
+    
+    BACKUP_DIR="/opt/teslamate_backups"
+    
+    # 列出可用的备份文件
+    if [[ ! -d "$BACKUP_DIR" ]] || [[ -z "$(ls -A $BACKUP_DIR 2>/dev/null)" ]]; then
+        print_message $RED "未找到备份文件"
+        printf "%b" "${BLUE}请输入备份文件的完整路径: ${NC}"
+        read BACKUP_FILE
+        if [[ ! -f "$BACKUP_FILE" ]]; then
+            print_message $RED "备份文件不存在: $BACKUP_FILE"
+            exit 1
+        fi
+    else
+        print_message $CYAN "可用的备份文件:"
+        ls -la "$BACKUP_DIR"
+        echo
+        printf "%b" "${BLUE}请输入要恢复的备份文件名: ${NC}"
+        read BACKUP_NAME
+        BACKUP_FILE="$BACKUP_DIR/$BACKUP_NAME"
+        
+        if [[ ! -f "$BACKUP_FILE" ]]; then
+            print_message $RED "备份文件不存在: $BACKUP_FILE"
+            exit 1
+        fi
+    fi
+    
+    print_message $YELLOW "将要恢复的备份文件: $BACKUP_FILE"
+    printf "%b" "${RED}警告: 这将覆盖现有的所有数据！${NC}\n"
+    printf "%b" "${BLUE}是否继续? [y/N]: ${NC}"
+    read -n 1 -r
+    echo
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_message $YELLOW "取消恢复操作"
+        exit 0
+    fi
+    
+    # 停止 teslamate 服务
+    print_message $YELLOW "正在停止 TeslaMate 服务..."
+    docker compose stop teslamate
+    
+    # 删除现有数据并重新初始化
+    print_message $YELLOW "正在重新初始化数据库..."
+    docker compose exec -T database psql -U teslamate teslamate << 'SQL'
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+CREATE EXTENSION cube WITH SCHEMA public;
+CREATE EXTENSION earthdistance WITH SCHEMA public;
+SQL
+    
+    # 恢复数据
+    print_message $YELLOW "正在恢复数据..."
+    docker compose exec -T database psql -U teslamate -d teslamate < "$BACKUP_FILE"
+    
+    # 重启 teslamate 服务
+    print_message $YELLOW "正在重启 TeslaMate 服务..."
+    docker compose start teslamate
+    
+    print_message $GREEN "数据恢复完成！"
+}
+
 # 收集用户输入
 collect_user_input() {
     print_title "配置环境变量"
     
     # 域名配置
     while true; do
-        read -p "$(echo -e ${BLUE}请输入您的域名 (例如: teslamate.example.com): ${NC})" DOMAIN
+        printf "%b" "${BLUE}请输入您的域名 (例如: teslamate.example.com): ${NC}"
+        read DOMAIN
         if [[ -n "$DOMAIN" && "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$ ]]; then
             break
         else
@@ -95,7 +288,8 @@ collect_user_input() {
     
     # 邮箱配置
     while true; do
-        read -p "$(echo -e ${BLUE}请输入您的邮箱 (用于 SSL 证书申请): ${NC})" EMAIL
+        printf "%b" "${BLUE}请输入您的邮箱 (用于 SSL 证书申请): ${NC}"
+        read EMAIL
         if [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
             break
         else
@@ -105,9 +299,11 @@ collect_user_input() {
     
     # 基础认证配置
     print_message $YELLOW "基础认证配置:"
-    read -p "$(echo -e ${BLUE}请输入 TeslaMate 用户名 (默认: admin): ${NC})" BASIC_AUTH_USER
+    printf "%b" "${BLUE}请输入 TeslaMate 用户名 (默认: admin): ${NC}"
+    read BASIC_AUTH_USER
     BASIC_AUTH_USER=${BASIC_AUTH_USER:-"admin"}
-    read -s -p "$(echo -e ${BLUE}请输入 TeslaMate 密码 (留空自动生成): ${NC})" BASIC_AUTH_PASS
+    printf "%b" "${BLUE}请输入 TeslaMate 密码 (留空自动生成): ${NC}"
+    read -s BASIC_AUTH_PASS
     echo
     if [[ -z "$BASIC_AUTH_PASS" ]]; then
         BASIC_AUTH_PASS=$(generate_password 16)
@@ -115,7 +311,8 @@ collect_user_input() {
     fi
     
     # 可选配置
-    read -p "$(echo -e ${BLUE}请输入时区 (默认: Asia/Shanghai): ${NC})" TIMEZONE
+    printf "%b" "${BLUE}请输入时区 (默认: Asia/Shanghai): ${NC}"
+    read TIMEZONE
     TIMEZONE=${TIMEZONE:-"Asia/Shanghai"}
     
     # 生成随机密码
@@ -127,9 +324,11 @@ collect_user_input() {
     
     # 可选的百度地图配置
     print_message $YELLOW "百度地图配置 (可选，用于更精确的位置信息):"
-    read -p "$(echo -e ${BLUE}百度地图 AK (留空跳过): ${NC})" BD_MAP_AK
+    printf "%b" "${BLUE}百度地图 AK (留空跳过): ${NC}"
+    read BD_MAP_AK
     if [[ -n "$BD_MAP_AK" ]]; then
-        read -p "$(echo -e ${BLUE}百度地图 SK: ${NC})" BD_MAP_SK
+        printf "%b" "${BLUE}百度地图 SK: ${NC}"
+        read BD_MAP_SK
     fi
     
     print_message $GREEN "环境变量配置完成！"
@@ -176,10 +375,7 @@ BD_MAP_AK=$BD_MAP_AK
 BD_MAP_SK=$BD_MAP_SK
 EOF
 
-    # 创建 docker-compose.yml (基于 MyTesla-oversea 配置)
     cat > docker-compose.yml << 'EOF'
-version: "3"
-
 services:
   auth-generator:
     image: httpd:2.4
@@ -351,31 +547,6 @@ EOF
     print_message $GREEN "项目文件创建完成！"
 }
 
-# 配置防火墙
-setup_firewall() {
-    print_title "配置防火墙"
-    
-    # 安装 UFW
-    if ! command -v ufw &> /dev/null; then
-        apt update && apt install -y ufw
-    fi
-    
-    # 配置防火墙规则
-    ufw --force reset
-    ufw default deny incoming
-    ufw default allow outgoing
-    
-    # 允许必要端口
-    ufw allow 22/tcp comment 'SSH'
-    ufw allow 80/tcp comment 'HTTP'
-    ufw allow 443/tcp comment 'HTTPS'
-    
-    # 启用防火墙
-    ufw --force enable
-    
-    print_message $GREEN "防火墙配置完成！"
-}
-
 # 启动服务
 start_services() {
     print_title "启动 TeslaMate 服务"
@@ -384,11 +555,11 @@ start_services() {
     
     # 拉取镜像
     print_message $YELLOW "正在拉取 Docker 镜像..."
-    docker-compose pull
+    docker compose pull
     
     # 启动服务
     print_message $YELLOW "正在启动服务..."
-    docker-compose up -d
+    docker compose up -d
     
     print_message $GREEN "服务启动完成！"
 }
@@ -402,11 +573,11 @@ wait_for_services() {
     
     # 检查服务状态
     cd $PROJECT_DIR
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         print_message $GREEN "服务启动成功！"
     else
         print_message $RED "服务启动可能有问题，请检查日志："
-        print_message $YELLOW "docker-compose logs"
+        print_message $YELLOW "docker compose logs"
     fi
 }
 
@@ -428,36 +599,105 @@ $(print_message $CYAN "🔐 登录信息:")
 • Grafana 用户名: admin
 • Grafana 密码: $GRAFANA_PW
 
+$(print_message $CYAN "🚗 Mytesla UI 登录信息:")
+• 访问地址设置：https://$DOMAIN
+• 访问令牌: $API_TOKEN
+
 $(print_message $CYAN "🛠️ 常用命令:")
-• 查看服务状态: cd $PROJECT_DIR && docker-compose ps
-• 查看日志: cd $PROJECT_DIR && docker-compose logs -f
-• 重启服务: cd $PROJECT_DIR && docker-compose restart
-• 停止服务: cd $PROJECT_DIR && docker-compose down
+• 查看服务状态: cd $PROJECT_DIR && docker compose ps
+• 查看日志: cd $PROJECT_DIR && docker compose logs -f
+• 重启服务: cd $PROJECT_DIR && docker compose restart
+• 停止服务: cd $PROJECT_DIR && docker compose down
+
+$(print_message $CYAN "💾 备份和恢复命令:")
+• 备份数据: $0 --backup
+• 恢复数据: $0 --restore
+• 手动备份: cd $PROJECT_DIR && docker compose exec -T database pg_dump -U teslamate teslamate > teslamate_backup_\$(date +%Y%m%d_%H%M%S).bck
 
 $(print_message $YELLOW "⚠️ 重要提示:")
 1. 请保存好上述登录信息
 2. SSL 证书申请需要 2-5 分钟，请耐心等待
 3. 首次访问可能需要等待 5-10 分钟服务完全启动
+4. 建议定期备份数据，备份文件将保存在 /opt/teslamate_backups/
 
-$(print_message $PURPLE "📱 MyTesla 应用推荐:")
-• 下载 MyTesla 移动应用获得更好的使用体验
-• 支持实时监控、数据分析、智能提醒等功能
-• iOS/Android 应用商店搜索 "MyTesla"
+$(print_message $PURPLE "📱 Mytesla UI推荐:")
+• 使用 Mytesla UI 获得更好的使用体验
+• 支持实时监控、数据分析、电池健康度查询、峰谷用电自动计费、提醒等功能
+• https://portal.mytesla.cc
+• https://xhslink.com/m/3iNZ8St7x9J
 
 $(print_message $GREEN "🚗 现在您可以访问 https://$DOMAIN 开始使用 TeslaMate！")
 EOF
 }
 
+# 显示帮助信息
+show_help() {
+    cat << EOF
+TeslaMate 一键部署脚本
+
+用法:
+  $0                安装或重新安装 TeslaMate
+  $0 --backup       备份现有数据
+  $0 --restore      恢复数据
+  $0 --help         显示此帮助信息
+
+选项:
+  --backup          创建数据库备份
+  --restore         从备份恢复数据
+  --help            显示帮助信息
+
+示例:
+  sudo $0                    # 全新安装
+  sudo $0 --backup           # 备份数据
+  sudo $0 --restore          # 恢复数据
+
+注意:
+  - 脚本需要 root 权限运行
+  - 备份文件保存在 /opt/teslamate_backups/
+  - 重新安装前会自动创建备份
+EOF
+}
+
 # 主函数
 main() {
+    # 处理命令行参数
+    case "${1:-}" in
+        --backup)
+            check_root
+            backup_data
+            exit 0
+            ;;
+        --restore)
+            check_root
+            restore_data
+            exit 0
+            ;;
+        --help)
+            show_help
+            exit 0
+            ;;
+        "")
+            # 正常安装流程
+            ;;
+        *)
+            print_message $RED "未知参数: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+    
     print_title "TeslaMate 一键部署脚本"
     
     print_message $CYAN "欢迎使用 TeslaMate 一键部署脚本！"
     print_message $YELLOW "本脚本将帮助您在腾讯云服务器上安全部署 TeslaMate"
     echo
     
+    # 检查现有安装
+    check_existing_installation
+    
     # 确认继续
-    read -p "$(echo -e ${BLUE}是否继续安装? [y/N]: ${NC})" -n 1 -r
+    printf "%b" "${BLUE}是否继续安装? [y/N]: ${NC}"
+    read -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_message $YELLOW "安装已取消"
@@ -470,7 +710,6 @@ main() {
     install_docker
     collect_user_input
     setup_project
-    setup_firewall
     start_services
     wait_for_services
     show_deployment_info
