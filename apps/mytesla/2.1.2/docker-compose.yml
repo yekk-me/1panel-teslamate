@@ -120,6 +120,7 @@ services:
     restart: unless-stopped
     depends_on:
       - database
+      - teslamate
     environment:
       - DATABASE_USER=${TM_DB_USER}
       - DATABASE_PASS=${TM_DB_PASS}
