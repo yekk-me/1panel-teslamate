@@ -124,6 +124,7 @@ services:
     depends_on:
       - database
       - teslamate
+      - mosquitto
     environment:
       - DATABASE_USER=${TM_DB_USER}
       - DATABASE_PASS=${TM_DB_PASS}
