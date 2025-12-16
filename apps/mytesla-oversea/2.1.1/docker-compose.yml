@@ -24,7 +24,7 @@ services:
 
   # Traefik as unified gateway
   traefik:
-    image: traefik:v3.5.0
+    image: traefik
     container_name: ${CONTAINER_NAME}-traefik
     restart: unless-stopped
     command:
