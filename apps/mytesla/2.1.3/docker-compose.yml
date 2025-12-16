@@ -33,7 +33,7 @@ services:
 
   # Traefik as unified gateway
   traefik:
-    image: docker.1ms.run/traefik:v3.5.0
+    image: docker.1ms.run/traefik
     container_name: ${CONTAINER_NAME}-traefik
     restart: unless-stopped
     command:
