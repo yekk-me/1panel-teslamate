@@ -1,0 +1,168 @@
+version: "3"
+
+services:
+  # Cloudflare Tunnel for internal network penetration
+  cloudflared:
+    image: docker.1ms.run/cloudflare/cloudflared:latest
+    container_name: ${CONTAINER_NAME}-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - traefik
+
+  auth-generator:
+    image: docker.1ms.run/httpd:2.4
+    container_name: ${CONTAINER_NAME}-auth-generator
+    restart: "unless-stopped"
+    volumes:
+      - ./data/auth:/auth
+    environment:
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
+    command: >
+      sh -c '
+        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASS" ]; then
+          htpasswd -cb /auth/.htpasswd $$BASIC_AUTH_USER $$BASIC_AUTH_PASS;
+          echo "Basic Auth file created/updated.";
+        else
+          echo "Warning: BASIC_AUTH_USER or BASIC_AUTH_PASS not set. Skipping .htpasswd creation.";
+        fi
+        echo "Initialization complete. Staying alive for the panel...";
+        tail -f /dev/null
+      '
+
+  # Traefik as unified gateway
+  traefik:
+    image: docker.1ms.run/traefik:v3.6
+    container_name: ${CONTAINER_NAME}-traefik
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/auth:/auth
+    labels:
+      - "traefik.enable=true"
+    depends_on:
+      - auth-generator
+
+  teslamate:
+    image: docker.1ms.run/mytesla/teslamate:v2.1
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - database
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - VIRTUAL_HOST=${CLOUDFLARE_DOMAIN}
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - TZ=${TZ}
+      - CHECK_ORIGIN=true
+      - BD_MAP_AK=${BD_MAP_AK}
+      - BD_MAP_SK=${BD_MAP_SK}
+    volumes:
+      - ./data/teslamate:/opt/app/import
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
+      # Basic auth middleware
+      - "traefik.http.middlewares.teslamate-auth.basicauth.usersfile=/auth/.htpasswd"
+      - "traefik.http.middlewares.teslamate-auth.basicauth.realm=TeslaMate"
+      # Router for main teslamate
+      - "traefik.http.routers.teslamate.rule=Host(`${CLOUDFLARE_DOMAIN}`)"
+      - "traefik.http.routers.teslamate.entrypoints=web"
+      - "traefik.http.routers.teslamate.middlewares=teslamate-auth"
+      # WebSocket router without auth
+      - "traefik.http.routers.teslamate-ws.rule=Host(`${CLOUDFLARE_DOMAIN}`) && Path(`/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws.entrypoints=web"
+
+  grafana:
+    image: docker.1ms.run/mytesla/grafana:v2.1
+    container_name: ${CONTAINER_NAME}-grafana
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=${GRAFANA_PW}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_DEFAULT_LANGUAGE=zh-CN
+      - GF_SERVER_DOMAIN=${CLOUDFLARE_DOMAIN}
+      - GF_SERVER_ROOT_URL=https://${CLOUDFLARE_DOMAIN}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.rule=Host(`${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+
+  teslamateapi:
+    image: docker.1ms.run/mytesla/teslamateapi:v1.2
+    container_name: ${CONTAINER_NAME}-teslamateapi
+    restart: unless-stopped
+    depends_on:
+      - database
+      - teslamate
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - MQTT_HOST=mosquitto
+      - API_TOKEN=${API_TOKEN}
+      - PANEL_PORT=${PANEL_PORT}
+      - PANEL_NO=${PANEL_NO}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/teslamateapi:/opt/app/data
+      - /tmp/current_ip:/host/current_ip:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
+      - "traefik.http.routers.teslamateapi.rule=Host(`${CLOUDFLARE_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.teslamateapi.entrypoints=web"
+
+  database:
+    image: docker.1ms.run/postgres:17
+    container_name: ${CONTAINER_NAME}-database
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${TM_DB_USER}
+      - POSTGRES_PASSWORD=${TM_DB_PASS}
+      - POSTGRES_DB=${TM_DB_NAME}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  mosquitto:
+    image: docker.1ms.run/eclipse-mosquitto:2
+    container_name: ${CONTAINER_NAME}-mosquitto
+    restart: unless-stopped
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network
