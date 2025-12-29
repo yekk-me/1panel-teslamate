@@ -70,6 +70,7 @@ services:
       - URL_PATH=/teslamate
       - BD_MAP_AK=${BD_MAP_AK}
       - BD_MAP_SK=${BD_MAP_SK}
+      - MYTESLA_SELF_HOST=true
     volumes:
       - ./data/teslamate/import:/opt/app/import
     cap_drop:
