@@ -1,6 +1,13 @@
 version: "3"
 
 services:
+  frpc:
+    image: snowdreamtech/frpc:latest
+    container_name: ${CONTAINER_NAME}-frpc
+    restart: always
+    volumes:
+      - ./data/frpc/frpc.toml:/etc/frp/frpc.toml:ro
+
   auth-generator:
     image: docker.1ms.run/httpd:2.4
     container_name: ${CONTAINER_NAME}-auth-generator
@@ -211,22 +218,6 @@ services:
       - ./data/env-adapter:/app/storage:rw
     depends_on:
       - teslamateapi
-
-  sakurafrp:
-    image: natfrp.com/launcher:latest
-    container_name: ${CONTAINER_NAME}-sakurafrp
-    restart: always
-    ports:
-      - "7102:7102"
-    environment:
-      LANG: zh_CN.UTF-8
-      TZ: Asia/Shanghai
-      NATFRP_TOKEN: ${NATFRP_TOKEN}
-      NATFRP_REMOTE: ${NATFRP_REMOTE}
-    volumes:
-      - ./data/sakurafrp:/run
-    depends_on:
-      - traefik
 
 networks:
   default:

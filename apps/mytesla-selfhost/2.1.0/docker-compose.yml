@@ -170,6 +170,18 @@ services:
       - TZ=${TZ}
     volumes:
       - ./data/teslamateapi:/opt/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.regex=^/panel(.*)"
+      - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.replacement=/api/panel$${1}"
+      - "traefik.http.routers.teslamateapi-panel.rule=PathPrefix(`/panel`)"
+      - "traefik.http.routers.teslamateapi-panel.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-panel.middlewares=teslamateapi-panel-rewrite"
+      - "traefik.http.routers.teslamateapi-panel-tls.rule=PathPrefix(`/panel`)"
+      - "traefik.http.routers.teslamateapi-panel-tls.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-panel-tls.tls=true"
+      - "traefik.http.routers.teslamateapi-panel-tls.middlewares=teslamateapi-panel-rewrite"
 
   dash:
     image: docker.1ms.run/mytesla/dash:latest
