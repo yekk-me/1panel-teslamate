@@ -25,7 +25,7 @@ serverAddr = "${FRP_SERVER_ADDR}"
 serverPort = ${FRP_SERVER_PORT}
 
 [[proxies]]
-name = "${PROXY_NAME}"
+name = "${PROXY_NAME}_web_${LOCAL_PORT}"
 type = "${PROXY_TYPE}"
 localIP = "${LOCAL_IP}"
 localPort = ${LOCAL_PORT}
@@ -33,7 +33,7 @@ EOF
 
 # 如果是 HTTP/HTTPS 类型，添加 subdomain
 if [ "${PROXY_TYPE}" = "http" ] || [ "${PROXY_TYPE}" = "https" ]; then
-    echo "subdomain = \"${PROXY_NAME}\"" >> ./data/frpc/frpc.toml
+    echo "subdomain = \"${PROXY_NAME}-frp\"" >> ./data/frpc/frpc.toml
 fi
 
 # 设置文件权限
