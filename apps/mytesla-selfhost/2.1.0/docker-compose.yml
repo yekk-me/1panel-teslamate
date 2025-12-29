@@ -1,0 +1,213 @@
+version: "3"
+
+services:
+  # Cloudflare Tunnel for internal network penetration
+  cloudflared:
+    image: docker.1ms.run/cloudflare/cloudflared:latest
+    container_name: ${CONTAINER_NAME}-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - traefik
+
+  auth-generator:
+    image: docker.1ms.run/httpd:2.4
+    container_name: ${CONTAINER_NAME}-auth-generator
+    restart: "unless-stopped"
+    volumes:
+      - ./data/auth:/auth
+    environment:
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
+    command: >
+      sh -c '
+        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASS" ]; then
+          htpasswd -cb /auth/.htpasswd $$BASIC_AUTH_USER $$BASIC_AUTH_PASS;
+          echo "Basic Auth file created/updated.";
+        else
+          echo "Warning: BASIC_AUTH_USER or BASIC_AUTH_PASS not set. Skipping .htpasswd creation.";
+        fi
+        echo "Initialization complete. Staying alive for the panel...";
+        tail -f /dev/null
+      '
+
+  traefik:
+    image: docker.1ms.run/traefik:v3.6
+    container_name: ${CONTAINER_NAME}-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --log.level=INFO
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/auth:/auth
+    labels:
+      - "traefik.enable=true"
+    depends_on:
+      - auth-generator
+
+  teslamate:
+    image: docker.1ms.run/mytesla/teslamate:latest
+    container_name: ${CONTAINER_NAME}
+    restart: always
+    depends_on:
+      - database
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - TZ=${TZ}
+      - CHECK_ORIGIN=false
+      - URL_PATH=/teslamate
+      - BD_MAP_AK=${BD_MAP_AK}
+      - BD_MAP_SK=${BD_MAP_SK}
+    volumes:
+      - ./data/teslamate/import:/opt/app/import
+    cap_drop:
+      - all
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
+      - "traefik.http.middlewares.teslamate-auth.basicauth.usersfile=/auth/.htpasswd"
+      - "traefik.http.middlewares.teslamate-auth.basicauth.realm=mytesla"
+      - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
+      - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
+      - "traefik.http.routers.teslamate-public.entrypoints=web"
+      - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate.entrypoints=web"
+      - "traefik.http.routers.teslamate.middlewares=teslamate-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
+      - "traefik.http.routers.teslamate-public-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-public-tls.tls=true"
+      - "traefik.http.routers.teslamate-tls.middlewares=teslamate-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-tls.tls=true"
+      - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-ws-tls.tls=true"
+
+  database:
+    image: docker.1ms.run/postgres:17
+    container_name: ${CONTAINER_NAME}-database
+    restart: always
+    environment:
+      - POSTGRES_USER=${TM_DB_USER}
+      - POSTGRES_PASSWORD=${TM_DB_PASS}
+      - POSTGRES_DB=${TM_DB_NAME}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  grafana:
+    image: docker.1ms.run/mytesla/grafana:v2.1
+    container_name: ${CONTAINER_NAME}-grafana
+    restart: always
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=${GRAFANA_PW}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_DEFAULT_LANGUAGE=zh-CN
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana-tls.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.tls=true"
+
+  mosquitto:
+    image: docker.1ms.run/eclipse-mosquitto:2
+    container_name: ${CONTAINER_NAME}-mosquitto
+    restart: always
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+  teslamateapi:
+    image: docker.1ms.run/mytesla/teslamateapi:latest
+    container_name: ${CONTAINER_NAME}-teslamateapi
+    restart: unless-stopped
+    depends_on:
+      - database
+      - teslamate
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - MQTT_HOST=mosquitto
+      - TZ=${TZ}
+    volumes:
+      - ./data/teslamateapi:/opt/app/data
+
+  dash:
+    image: docker.1ms.run/mytesla/dash:latest
+    container_name: ${CONTAINER_NAME}-dash
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_AMAP_KEY=${NEXT_PUBLIC_AMAP_KEY}
+    depends_on:
+      - teslamateapi
+      - env-adapter
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.dash.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.dash-auth.basicauth.usersfile=/auth/.htpasswd"
+      - "traefik.http.middlewares.dash-auth.basicauth.realm=mytesla"
+      - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash.entrypoints=web"
+      - "traefik.http.routers.dash.middlewares=dash-auth"
+      - "traefik.http.routers.dash-public.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
+      - "traefik.http.routers.dash-public.entrypoints=web"
+      - "traefik.http.routers.dash-public-tls.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
+      - "traefik.http.routers.dash-public-tls.entrypoints=web"
+      - "traefik.http.routers.dash-public-tls.tls=true"
+      - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash-tls.entrypoints=web"
+      - "traefik.http.routers.dash-tls.tls=true"
+      - "traefik.http.routers.dash-tls.middlewares=dash-auth"
+
+  env-adapter:
+    image: docker.1ms.run/mytesla/env-adapter:latest
+    container_name: ${CONTAINER_NAME}-env-adapter
+    restart: unless-stopped
+    volumes:
+      - /etc/machine-id:/etc/machine-id:ro
+      - /proc/cpuinfo:/proc/cpuinfo:ro
+      - ./data/env-adapter:/app/storage:rw
+    depends_on:
+      - teslamateapi
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network

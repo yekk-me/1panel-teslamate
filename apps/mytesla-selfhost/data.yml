@@ -1,0 +1,14 @@
+additionalProperties:
+  key: mytesla-selfhost
+  name: Mytesla Self Host
+  tags:
+    - Tool
+  description:
+    en: A self-hosted data logger for Tesla vehicles with Cloudflare tunnel
+    zh: 特斯拉车辆数据记录器（Cloudflare 内网穿透版）
+    zh-Hant: 特斯拉車輛數據記錄器（Cloudflare 內網穿透版）
+  type: tool
+  crossVersionUpdate: false
+  limit: 0
+  website: https://mytesla.cc/
+  document: https://manual.mytesla.cc/

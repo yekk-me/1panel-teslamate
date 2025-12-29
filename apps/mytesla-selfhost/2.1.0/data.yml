@@ -1,0 +1,173 @@
+additionalProperties:
+  formFields:
+    - default: ""
+      envKey: CLOUDFLARE_TUNNEL_TOKEN
+      edit: true
+      label:
+        en: Cloudflare Tunnel Token
+        zh: Cloudflare Tunnel 令牌
+        zh-Hant: Cloudflare Tunnel 令牌
+      required: true
+      type: password
+
+    - default: ""
+      envKey: CLOUDFLARE_DOMAIN
+      edit: true
+      label:
+        en: Domain (e.g. mytesla.example.com)
+        zh: 域名 (例如 mytesla.example.com)
+        zh-Hant: 域名 (例如 mytesla.example.com)
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: "admin"
+      envKey: BASIC_AUTH_USER
+      edit: true
+      label:
+        en: TeslaMate Username
+        zh: TeslaMate 用户名
+        zh-Hant: TeslaMate 用戶名
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: "admin"
+      envKey: BASIC_AUTH_PASS
+      edit: true
+      label:
+        en: TeslaMate Password
+        zh: TeslaMate 密码
+        zh-Hant: TeslaMate 密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: teslamate
+      envKey: TM_DB_NAME
+      label:
+        en: Database Name
+        zh: 数据库名
+        zh-Hant: 資料庫名稱
+      random: true
+      required: true
+      type: text
+
+    - default: teslamate
+      envKey: TM_DB_USER
+      label:
+        en: Database User
+        zh: 数据库用户
+        zh-Hant: 資料庫使用者
+      random: true
+      required: true
+      rule: paramComplexity
+      type: text
+
+    - default: teslamate
+      envKey: TM_DB_PASS
+      label:
+        en: Database Password
+        zh: 数据库密码
+        zh-Hant: 資料庫密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: "secret"
+      envKey: TM_ENCRYPTION_KEY
+      label:
+        en: Encryption Key
+        zh: 加密密钥
+        zh-Hant: 加密密鑰
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: admin
+      envKey: GRAFANA_USER
+      label:
+        en: Grafana Admin User
+        zh: Grafana 管理员用户
+        zh-Hant: Grafana 管理員用戶
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: admin
+      envKey: GRAFANA_PW
+      label:
+        en: Grafana Admin Password
+        zh: Grafana 管理员密码
+        zh-Hant: Grafana 管理員密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: Asia/Shanghai
+      envKey: TZ
+      label:
+        en: Timezone
+        zh: 时区
+        zh-Hant: 時區
+      required: true
+      type: select
+      values:
+        - label: Asia/Shanghai
+          value: Asia/Shanghai
+        - label: UTC
+          value: UTC
+        - label: America/New_York
+          value: America/New_York
+        - label: Europe/London
+          value: Europe/London
+        - label: Europe/Berlin
+          value: Europe/Berlin
+        - label: Asia/Tokyo
+          value: Asia/Tokyo
+
+    - default: ""
+      envKey: NEXT_PUBLIC_AMAP_KEY
+      edit: true
+      label:
+        en: Gaode Map Key
+        zh: 高德地图 Key
+        zh-Hant: 高德地圖 Key
+      required: false
+      type: text
+      description:
+        en: Optional. Used for Dash map display.
+        zh: 可选配置。用于 Dash 地图显示。
+        zh-Hant: 可選配置。用於 Dash 地圖顯示。
+
+    - default: ""
+      envKey: BD_MAP_AK
+      edit: true
+      label:
+        en: Baidu Map AK (Access Key)
+        zh: 百度地图 AK (访问密钥)
+        zh-Hant: 百度地圖 AK (訪問密鑰)
+      required: false
+      type: text
+      description:
+        en: Optional. Configure for more accurate location information.
+        zh: 可选配置。配置后可获得更精准的位置信息。
+        zh-Hant: 可選配置。配置後可獲得更精準的位置信息。
+
+    - default: ""
+      envKey: BD_MAP_SK
+      edit: true
+      label:
+        en: Baidu Map SK (Secret Key)
+        zh: 百度地图 SK (安全密钥)
+        zh-Hant: 百度地圖 SK (安全密鑰)
+      required: false
+      type: password
+      description:
+        en: Optional. Required when using Baidu Map AK.
+        zh: 可选配置。使用百度地图 AK 时需要配置。
+        zh-Hant: 可選配置。使用百度地圖 AK 時需要配置。
