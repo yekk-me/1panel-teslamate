@@ -21,19 +21,19 @@ echo "正在生成 frpc.toml 配置文件..."
 cat > ./data/frpc/frpc.toml << EOF
 # frpc.toml
 
-serverAddr = "${FRP_SERVER_ADDR}"
-serverPort = ${FRP_SERVER_PORT}
+serverAddr = "addr.mytess.net"
+serverPort = 7001
 
 [[proxies]]
-name = "${PROXY_NAME}_web_${LOCAL_PORT}"
-type = "${PROXY_TYPE}"
-localIP = "${LOCAL_IP}"
-localPort = ${LOCAL_PORT}
+name = "${PROXY_NAME}_traefik_80"
+type = "http"
+localIP = "traefik"
+localPort = 80
 EOF
 
 # 如果是 HTTP/HTTPS 类型，添加 subdomain
 if [ "${PROXY_TYPE}" = "http" ] || [ "${PROXY_TYPE}" = "https" ]; then
-    echo "subdomain = \"${PROXY_NAME}-frp\"" >> ./data/frpc/frpc.toml
+    echo "customDomains = [\"${PROXY_NAME}.mytess.net\"]" >> ./data/frpc/frpc.toml
 fi
 
 # 设置文件权限
