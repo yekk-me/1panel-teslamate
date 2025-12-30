@@ -34,6 +34,22 @@ additionalProperties:
       rule: paramComplexity
       type: password
 
+    - default: ""
+      envKey: AUTH_SECRET_KEY
+      edit: true
+      label:
+        en: Session Secret Key
+        zh: 会话签名密钥
+        zh-Hant: 會話簽名密鑰
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+      description:
+        en: Used for signing login session cookies. Auto-generated if empty.
+        zh: 用于登录会话 Cookie 签名。留空则自动生成。
+        zh-Hant: 用於登入會話 Cookie 簽名。留空則自動生成。
+
     - default: teslamate
       envKey: TM_DB_NAME
       label:
