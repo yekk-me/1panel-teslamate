@@ -10,26 +10,40 @@ services:
     depends_on:
       - traefik
 
-  auth-generator:
-    image: docker.1ms.run/httpd:2.4
-    container_name: ${CONTAINER_NAME}-auth-generator
-    restart: "unless-stopped"
-    volumes:
-      - ./data/auth:/auth
+  # ForwardAuth service for Cookie-based authentication
+  auth:
+    image: docker.1ms.run/mytesla/auth:latest
+    container_name: ${CONTAINER_NAME}-auth
+    restart: unless-stopped
     environment:
-      - BASIC_AUTH_USER=${BASIC_AUTH_USER}
-      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
-    command: >
-      sh -c '
-        if [ -n "$$BASIC_AUTH_USER" ] && [ -n "$$BASIC_AUTH_PASS" ]; then
-          htpasswd -cb /auth/.htpasswd $$BASIC_AUTH_USER $$BASIC_AUTH_PASS;
-          echo "Basic Auth file created/updated.";
-        else
-          echo "Warning: BASIC_AUTH_USER or BASIC_AUTH_PASS not set. Skipping .htpasswd creation.";
-        fi
-        echo "Initialization complete. Staying alive for the panel...";
-        tail -f /dev/null
-      '
+      - AUTH_USERNAME=${BASIC_AUTH_USER}
+      - AUTH_PASSWORD=${BASIC_AUTH_PASS}
+      - SECRET_KEY=${AUTH_SECRET_KEY}
+      - CONFIG_PATH=/data/config.json
+    volumes:
+      - auth-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+      # Login/Logout/Settings routes
+      - "traefik.http.routers.auth-login.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
+      - "traefik.http.routers.auth-login.entrypoints=web"
+      - "traefik.http.routers.auth-login.priority=100"
+      - "traefik.http.routers.auth-login-tls.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
+      - "traefik.http.routers.auth-login-tls.entrypoints=web"
+      - "traefik.http.routers.auth-login-tls.priority=100"
+      - "traefik.http.routers.auth-login-tls.tls=true"
+      # Settings route
+      - "traefik.http.routers.auth-settings.rule=PathPrefix(`/settings`)"
+      - "traefik.http.routers.auth-settings.entrypoints=web"
+      - "traefik.http.routers.auth-settings.priority=100"
+      - "traefik.http.routers.auth-settings-tls.rule=PathPrefix(`/settings`)"
+      - "traefik.http.routers.auth-settings-tls.entrypoints=web"
+      - "traefik.http.routers.auth-settings-tls.priority=100"
+      - "traefik.http.routers.auth-settings-tls.tls=true"
+      # ForwardAuth middleware definition
+      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:8080/auth"
+      - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-Forwarded-User"
 
   traefik:
     image: docker.1ms.run/traefik:v3.6
@@ -45,11 +59,10 @@ services:
       - "80:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data/auth:/auth
     labels:
       - "traefik.enable=true"
     depends_on:
-      - auth-generator
+      - auth
 
   teslamate:
     image: docker.1ms.run/mytesla/teslamate:latest
@@ -78,30 +91,38 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
-      - "traefik.http.middlewares.teslamate-auth.basicauth.usersfile=/auth/.htpasswd"
-      - "traefik.http.middlewares.teslamate-auth.basicauth.realm=mytesla"
       - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
+      # Public routes (no auth)
       - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
       - "traefik.http.routers.teslamate-public.entrypoints=web"
       - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
-      - "traefik.http.routers.teslamate.entrypoints=web"
-      - "traefik.http.routers.teslamate.middlewares=teslamate-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-public.priority=20"
+      # WebSocket routes (no auth)
       - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
       - "traefik.http.routers.teslamate-ws.entrypoints=web"
       - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
-      - "traefik.http.routers.teslamate-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws.priority=15"
+      # Protected routes (with ForwardAuth)
+      - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate.entrypoints=web"
+      - "traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate.priority=10"
+      # TLS routes
       - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
       - "traefik.http.routers.teslamate-public-tls.entrypoints=web"
       - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip"
       - "traefik.http.routers.teslamate-public-tls.tls=true"
-      - "traefik.http.routers.teslamate-tls.middlewares=teslamate-auth,teslamate-strip"
-      - "traefik.http.routers.teslamate-tls.tls=true"
+      - "traefik.http.routers.teslamate-public-tls.priority=20"
       - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
       - "traefik.http.routers.teslamate-ws-tls.entrypoints=web"
       - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
       - "traefik.http.routers.teslamate-ws-tls.tls=true"
+      - "traefik.http.routers.teslamate-ws-tls.priority=15"
+      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-tls.tls=true"
+      - "traefik.http.routers.teslamate-tls.priority=10"
 
   database:
     image: docker.1ms.run/postgres:17.7
@@ -196,20 +217,24 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.dash.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.dash-auth.basicauth.usersfile=/auth/.htpasswd"
-      - "traefik.http.middlewares.dash-auth.basicauth.realm=mytesla"
-      - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.dash.entrypoints=web"
-      - "traefik.http.routers.dash.middlewares=dash-auth"
+      # Public routes (no auth) - PWA assets
       - "traefik.http.routers.dash-public.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
       - "traefik.http.routers.dash-public.entrypoints=web"
+      - "traefik.http.routers.dash-public.priority=20"
       - "traefik.http.routers.dash-public-tls.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
       - "traefik.http.routers.dash-public-tls.entrypoints=web"
       - "traefik.http.routers.dash-public-tls.tls=true"
+      - "traefik.http.routers.dash-public-tls.priority=20"
+      # Protected routes (with ForwardAuth)
+      - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash.entrypoints=web"
+      - "traefik.http.routers.dash.middlewares=forward-auth"
+      - "traefik.http.routers.dash.priority=1"
       - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
       - "traefik.http.routers.dash-tls.entrypoints=web"
       - "traefik.http.routers.dash-tls.tls=true"
-      - "traefik.http.routers.dash-tls.middlewares=dash-auth"
+      - "traefik.http.routers.dash-tls.middlewares=forward-auth"
+      - "traefik.http.routers.dash-tls.priority=1"
 
   env-adapter:
     image: docker.1ms.run/mytesla/env-adapter:latest
@@ -223,6 +248,7 @@ services:
       - teslamateapi
 
 volumes:
+  auth-data:
   teslamateapi-data:
   grafana-data:
   postgres-data:
