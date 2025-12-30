@@ -110,7 +110,7 @@ services:
       - POSTGRES_PASSWORD=${TM_DB_PASS}
       - POSTGRES_DB=${TM_DB_NAME}
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
 
   grafana:
     image: docker.1ms.run/mytesla/grafana:v2.1
@@ -131,7 +131,7 @@ services:
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
     volumes:
-      - ./data/grafana:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
@@ -167,7 +167,7 @@ services:
       - MQTT_HOST=mosquitto
       - TZ=${TZ}
     volumes:
-      - ./data/teslamateapi:/opt/app/data
+      - teslamateapi-data:/opt/app/data
       - /tmp/current_ip:/host/current_ip:ro
     labels:
       - "traefik.enable=true"
@@ -219,6 +219,11 @@ services:
       - ./data/env-adapter:/app/storage:rw
     depends_on:
       - teslamateapi
+volumes:
+  teslamateapi-data:
+  grafana-data:
+  postgres-data:
+
 
 networks:
   default:

@@ -32,9 +32,7 @@ localPort = 80
 EOF
 
 # 如果是 HTTP/HTTPS 类型，添加 subdomain
-if [ "${PROXY_TYPE}" = "http" ] || [ "${PROXY_TYPE}" = "https" ]; then
-    echo "customDomains = [\"${PROXY_NAME}.mytess.net\"]" >> ./data/frpc/frpc.toml
-fi
+echo "customDomains = [\"${PROXY_NAME}.mytess.net\"]" >> ./data/frpc/frpc.toml
 
 # 设置文件权限
 chmod 644 ./data/frpc/frpc.toml
