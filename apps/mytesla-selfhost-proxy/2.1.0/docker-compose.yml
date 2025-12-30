@@ -102,7 +102,7 @@ services:
       - "traefik.http.routers.teslamate-ws-tls.tls=true"
 
   database:
-    image: docker.1ms.run/postgres:17
+    image: docker.1ms.run/postgres:17.7
     container_name: ${CONTAINER_NAME}-database
     restart: always
     environment:
