@@ -32,9 +32,9 @@ additionalProperties:
       envKey: BASIC_AUTH_USER
       edit: true
       label:
-        en: TeslaMate Username
-        zh: TeslaMate 用户名
-        zh-Hant: TeslaMate 用戶名
+        en: Mytesla Username
+        zh: Mytesla 用户名
+        zh-Hant: Mytesla 用戶名
       required: true
       rule: paramCommon
       type: text
@@ -43,15 +43,15 @@ additionalProperties:
       envKey: BASIC_AUTH_PASS
       edit: true
       label:
-        en: TeslaMate Password
-        zh: TeslaMate 密码
-        zh-Hant: TeslaMate 密碼
+        en: Mytesla Password
+        zh: Mytesla 密码
+        zh-Hant: Mytesla 密碼
       random: true
       required: true
       rule: paramComplexity
       type: password
 
-    - default: ""
+    - default: "auth_secret"
       envKey: AUTH_SECRET_KEY
       edit: true
       label:
