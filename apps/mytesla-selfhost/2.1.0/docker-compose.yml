@@ -225,15 +225,17 @@ services:
       - "traefik.http.routers.dash-public-tls.entrypoints=web"
       - "traefik.http.routers.dash-public-tls.tls=true"
       - "traefik.http.routers.dash-public-tls.priority=20"
+      - "traefik.http.middlewares.dash-redirect.redirectregex.regex=^/$$"
+      - "traefik.http.middlewares.dash-redirect.redirectregex.replacement=/dashboard"
       # Protected routes (with ForwardAuth)
       - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
       - "traefik.http.routers.dash.entrypoints=web"
-      - "traefik.http.routers.dash.middlewares=forward-auth"
+      - "traefik.http.routers.dash.middlewares=forward-auth,dash-redirect"
       - "traefik.http.routers.dash.priority=1"
       - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
       - "traefik.http.routers.dash-tls.entrypoints=web"
       - "traefik.http.routers.dash-tls.tls=true"
-      - "traefik.http.routers.dash-tls.middlewares=forward-auth"
+      - "traefik.http.routers.dash-tls.middlewares=forward-auth,dash-redirect"
       - "traefik.http.routers.dash-tls.priority=1"
 
   env-adapter:
