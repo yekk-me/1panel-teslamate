@@ -23,7 +23,6 @@ additionalProperties:
         zh: Let's Encrypt 邮箱
         zh-Hant: Let's Encrypt 郵箱
       required: true
-      rule: paramCommon
       type: text
       description:
         en: Email for Let's Encrypt certificate notifications (expiry warnings etc.)
