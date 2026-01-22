@@ -161,12 +161,14 @@ additionalProperties:
         en: API Token
         zh: API Token
         zh-Hant: API Token
-      required: false
+      random: true
+      required: true
+      rule: paramComplexity
       type: password
       description:
-        en: Optional. Used for API authentication for third-party apps (e.g. Watchla, TeslamateApi).
-        zh: 可选配置。用于第三方应用（如 Watchla, TeslamateApi）的 API 鉴权。
-        zh-Hant: 可選配置。用於第三方應用（如 Watchla, TeslamateApi）的 API 鑑權。
+        en: Used for API authentication for third-party apps (e.g. Watchla, TeslamateApi). Auto-generated.
+        zh: 用于第三方应用（如 Watchla, TeslamateApi）的 API 鉴权。自动生成。
+        zh-Hant: 用於第三方應用（如 Watchla, TeslamateApi）的 API 鑑權。自動生成。
 
     - default: ""
       envKey: NEXT_PUBLIC_AMAP_KEY
