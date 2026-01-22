@@ -154,7 +154,7 @@ additionalProperties:
         - label: Asia/Tokyo
           value: Asia/Tokyo
 
-    - default: ""
+    - default: "api_token"
       envKey: API_TOKEN
       edit: true
       label:
