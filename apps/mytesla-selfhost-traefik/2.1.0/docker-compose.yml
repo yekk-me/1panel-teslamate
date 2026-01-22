@@ -188,7 +188,7 @@ services:
       - ./data/mosquitto/data:/mosquitto/data
 
   teslamateapi:
-    image: docker.1ms.run/mytesla/teslamateapi:latest
+    image: docker.1ms.run/mytesla/teslamateapi:testflight
     container_name: ${CONTAINER_NAME}-teslamateapi
     restart: unless-stopped
     depends_on:
