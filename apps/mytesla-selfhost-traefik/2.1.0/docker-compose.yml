@@ -212,14 +212,14 @@ services:
       - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.regex=^/panel(.*)"
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.replacement=/api/panel$${1}"
-      - "traefik.http.middlewares.teslamateapi-api-rewrite.replacepathregex.regex=^/mytess-api(.*)"
+      - "traefik.http.middlewares.teslamateapi-api-rewrite.replacepathregex.regex=^/mytess/api(.*)"
       - "traefik.http.middlewares.teslamateapi-api-rewrite.replacepathregex.replacement=/api$${1}"
       # Public API routes - HTTP
-      - "traefik.http.routers.teslamateapi-public.rule=PathPrefix(`/mytess-api`)"
+      - "traefik.http.routers.teslamateapi-public.rule=PathPrefix(`/mytess/api`)"
       - "traefik.http.routers.teslamateapi-public.entrypoints=web"
       - "traefik.http.routers.teslamateapi-public.middlewares=teslamateapi-api-rewrite"
       # Public API routes - HTTPS
-      - "traefik.http.routers.teslamateapi-public-tls.rule=PathPrefix(`/mytess-api`)"
+      - "traefik.http.routers.teslamateapi-public-tls.rule=PathPrefix(`/mytess/api`)"
       - "traefik.http.routers.teslamateapi-public-tls.entrypoints=websecure"
       - "traefik.http.routers.teslamateapi-public-tls.tls=true"
       - "traefik.http.routers.teslamateapi-public-tls.tls.certresolver=letsencrypt"
