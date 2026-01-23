@@ -194,3 +194,19 @@ additionalProperties:
         en: Optional. Required when using Baidu Map AK.
         zh: 可选配置。使用百度地图 AK 时需要配置。
         zh-Hant: 可選配置。使用百度地圖 AK 時需要配置。
+
+    - default: ""
+      envKey: API_TOKEN
+      edit: true
+      label:
+        en: API Token
+        zh: API 访问令牌
+        zh-Hant: API 訪問令牌
+      random: true
+      required: false
+      rule: paramComplexity
+      type: password
+      description:
+        en: Optional. Used for TeslaMate API authentication.
+        zh: 可选配置。用于 TeslaMate API 认证。
+        zh-Hant: 可選配置。用於 TeslaMate API 認證。
