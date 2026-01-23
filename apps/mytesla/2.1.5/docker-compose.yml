@@ -115,7 +115,7 @@ services:
       - "traefik.http.routers.grafana.entrypoints=web"
 
   teslamateapi:
-    image: docker.1ms.run/mytesla/teslamateapi:arm64-test
+    image: docker.1ms.run/mytesla/teslamateapi:testflight
     container_name: ${CONTAINER_NAME}-teslamateapi
     restart: unless-stopped
     depends_on:
