@@ -14,6 +14,21 @@ additionalProperties:
         zh: 从 SakuraFrp 用户面板获取（用户信息 -> 访问密钥）
         zh-Hant: 從 SakuraFrp 用戶面板獲取（用戶信息 -> 訪問密鑰）
 
+    - default: "sakura_"
+      envKey: NATFRP_REMOTE
+      edit: true
+      label:
+        en: Remote Management Address
+        zh: 远程管理地址
+        zh-Hant: 遠程管理地址
+      random: true
+      required: false
+      type: text
+      description:
+        en: "Optional. Format: ip:port or domain:port for remote management"
+        zh: "可选。远程管理地址，格式：IP:端口 或 域名:端口"
+        zh-Hant: "可選。遠程管理地址，格式：IP:端口 或 域名:端口"
+
     - default: 7102
       envKey: PANEL_APP_PORT_HTTP
       edit: true
