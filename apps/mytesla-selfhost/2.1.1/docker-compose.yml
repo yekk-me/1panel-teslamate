@@ -76,7 +76,7 @@ services:
       - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
       # Public routes (no auth) - static assets
-      - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
+      - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
       - "traefik.http.routers.teslamate-public.entrypoints=web"
       - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip,static-cache"
       - "traefik.http.routers.teslamate-public.priority=20"

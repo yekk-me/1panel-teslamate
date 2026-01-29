@@ -6,12 +6,11 @@ services:
     container_name: ${CONTAINER_NAME}
     restart: always
     ports:
-      - "7102:7102"
+      - "${PANEL_APP_PORT_HTTP:-7102}:7102"
     environment:
       LANG: zh_CN.UTF-8
       TZ: ${TZ}
       NATFRP_TOKEN: ${NATFRP_TOKEN}
-      NATFRP_REMOTE: ${NATFRP_REMOTE}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
