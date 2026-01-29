@@ -118,6 +118,22 @@ additionalProperties:
       rule: paramComplexity
       type: password
 
+    - default: "mytesla_"
+      envKey: API_TOKEN
+      edit: true
+      label:
+        en: TeslaMateAPI Token
+        zh: TeslaMateAPI 令牌
+        zh-Hant: TeslaMateAPI 令牌
+      random: true
+      required: false
+      rule: paramComplexity
+      type: password
+      description:
+        en: Optional. Used for TeslaMateAPI authentication (/mytess/api).
+        zh: 可选配置。用于 TeslaMateAPI 接口认证（/mytess/api）。
+        zh-Hant: 可選配置。用於 TeslaMateAPI 接口認證（/mytess/api）。
+
     - default: Asia/Shanghai
       envKey: TZ
       label:

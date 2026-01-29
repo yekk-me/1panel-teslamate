@@ -153,17 +153,25 @@ services:
       - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
       - MQTT_HOST=mosquitto
       - TZ=${TZ}
+      - API_TOKEN=${API_TOKEN}
     volumes:
       - teslamateapi-data:/opt/app/data
       - /tmp/current_ip:/host/current_ip:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
+      # /panel -> /api/panel rewrite
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.regex=^/panel(.*)"
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.replacement=/api/panel$${1}"
       - "traefik.http.routers.teslamateapi-panel.rule=PathPrefix(`/panel`)"
       - "traefik.http.routers.teslamateapi-panel.entrypoints=web"
       - "traefik.http.routers.teslamateapi-panel.middlewares=teslamateapi-panel-rewrite"
+      # /mytess/api -> /api rewrite (TeslaMateAPI)
+      - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.regex=^/mytess/api(.*)"
+      - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.replacement=/api$${1}"
+      - "traefik.http.routers.teslamateapi.rule=PathPrefix(`/mytess/api`)"
+      - "traefik.http.routers.teslamateapi.entrypoints=web"
+      - "traefik.http.routers.teslamateapi.middlewares=teslamateapi-rewrite"
 
   dash:
     image: docker.1ms.run/mytesla/dash:latest
