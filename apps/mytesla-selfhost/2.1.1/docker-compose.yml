@@ -100,7 +100,7 @@ services:
       - POSTGRES_PASSWORD=${TM_DB_PASS}
       - POSTGRES_DB=${TM_DB_NAME}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
 
   grafana:
     image: docker.1ms.run/mytesla/grafana:v2.2
