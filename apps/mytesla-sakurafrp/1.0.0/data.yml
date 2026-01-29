@@ -18,16 +18,16 @@ additionalProperties:
       envKey: NATFRP_REMOTE
       edit: true
       label:
-        en: Remote Management Address
-        zh: 远程管理地址
-        zh-Hant: 遠程管理地址
+        en: Remote Access Password
+        zh: 远程访问密码
+        zh-Hant: 遠程訪問密碼
       random: true
       required: false
-      type: text
+      type: password
       description:
-        en: "Optional. Format: ip:port or domain:port for remote management"
-        zh: "可选。远程管理地址，格式：IP:端口 或 域名:端口"
-        zh-Hant: "可選。遠程管理地址，格式：IP:端口 或 域名:端口"
+        en: "Optional. Password for remote management of SakuraFrp launcher"
+        zh: "可选。用于远程管理 SakuraFrp 启动器的密码"
+        zh-Hant: "可選。用於遠程管理 SakuraFrp 啟動器的密碼"
 
     - default: 7102
       envKey: PANEL_APP_PORT_HTTP
