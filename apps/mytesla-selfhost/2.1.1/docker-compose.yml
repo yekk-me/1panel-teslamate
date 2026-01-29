@@ -48,7 +48,7 @@ services:
       - auth
 
   teslamate:
-    image: docker.1ms.run/mytesla/teslamate:latest
+    image: docker.1ms.run/mytesla/teslamate:v2.2
     container_name: ${CONTAINER_NAME}
     restart: always
     depends_on:
@@ -92,7 +92,7 @@ services:
       - "traefik.http.routers.teslamate.priority=10"
 
   database:
-    image: docker.1ms.run/postgres:17.7
+    image: docker.1ms.run/postgres:18-trixie
     container_name: ${CONTAINER_NAME}-database
     restart: always
     environment:
@@ -103,7 +103,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
   grafana:
-    image: docker.1ms.run/mytesla/grafana:v2.1
+    image: docker.1ms.run/mytesla/grafana:v2.2
     container_name: ${CONTAINER_NAME}-grafana
     restart: always
     depends_on:
