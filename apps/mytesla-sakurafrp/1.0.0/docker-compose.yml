@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  sakurafrp:
+    image: natfrp.com/launcher:latest
+    container_name: ${CONTAINER_NAME}
+    restart: always
+    ports:
+      - "7102:7102"
+    environment:
+      LANG: zh_CN.UTF-8
+      TZ: ${TZ}
+      NATFRP_TOKEN: ${NATFRP_TOKEN}
+      NATFRP_REMOTE: ${NATFRP_REMOTE}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sakurafrp-data:/run
+
+volumes:
+  sakurafrp-data:
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network

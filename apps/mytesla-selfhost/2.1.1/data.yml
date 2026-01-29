@@ -1,33 +1,19 @@
 additionalProperties:
   formFields:
-    - default: ""
-      envKey: DOMAIN
+    - default: 8080
+      envKey: PANEL_APP_PORT_HTTP
       edit: true
       label:
-        en: Domain (e.g. mytesla.example.com)
-        zh: 域名 (例如 mytesla.example.com)
-        zh-Hant: 域名 (例如 mytesla.example.com)
+        en: HTTP Port
+        zh: HTTP 端口
+        zh-Hant: HTTP 端口
       required: true
-      rule: paramCommon
-      type: text
+      rule: paramPort
+      type: number
       description:
-        en: Your domain pointing to this server. DNS must be configured before installation.
-        zh: 指向此服务器的域名。安装前需完成 DNS 配置。
-        zh-Hant: 指向此伺服器的域名。安裝前需完成 DNS 配置。
-
-    - default: ""
-      envKey: LETSENCRYPT_EMAIL
-      edit: true
-      label:
-        en: Let's Encrypt Email
-        zh: Let's Encrypt 邮箱
-        zh-Hant: Let's Encrypt 郵箱
-      required: true
-      type: text
-      description:
-        en: Email for Let's Encrypt certificate notifications (expiry warnings etc.)
-        zh: 用于接收 Let's Encrypt 证书通知（如过期提醒）的邮箱
-        zh-Hant: 用於接收 Let's Encrypt 憑證通知（如過期提醒）的郵箱
+        en: The HTTP port exposed by the service. Use reverse proxy apps (cloudflared/traefik-ssl) for HTTPS access.
+        zh: 服务暴露的 HTTP 端口。如需 HTTPS 访问，请安装接入层应用（cloudflared/traefik-ssl）。
+        zh-Hant: 服務暴露的 HTTP 端口。如需 HTTPS 訪問，請安裝接入層應用（cloudflared/traefik-ssl）。
 
     - default: "admin"
       envKey: BASIC_AUTH_USER
@@ -153,22 +139,6 @@ additionalProperties:
           value: Europe/Berlin
         - label: Asia/Tokyo
           value: Asia/Tokyo
-
-    - default: "api_token"
-      envKey: API_TOKEN
-      edit: true
-      label:
-        en: API Token
-        zh: API Token
-        zh-Hant: API Token
-      random: true
-      required: true
-      rule: paramComplexity
-      type: password
-      description:
-        en: Used for API authentication for third-party apps (e.g. Watchla, TeslamateApi). Auto-generated.
-        zh: 用于第三方应用（如 Watchla, TeslamateApi）的 API 鉴权。自动生成。
-        zh-Hant: 用於第三方應用（如 Watchla, TeslamateApi）的 API 鑑權。自動生成。
 
     - default: ""
       envKey: NEXT_PUBLIC_AMAP_KEY

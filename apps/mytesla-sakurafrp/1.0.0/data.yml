@@ -1,0 +1,66 @@
+additionalProperties:
+  formFields:
+    - default: ""
+      envKey: NATFRP_TOKEN
+      edit: true
+      label:
+        en: SakuraFrp Access Token
+        zh: SakuraFrp 访问密钥
+        zh-Hant: SakuraFrp 訪問密鑰
+      required: true
+      type: password
+      description:
+        en: Get from SakuraFrp user panel
+        zh: 从 SakuraFrp 用户面板获取
+        zh-Hant: 從 SakuraFrp 用戶面板獲取
+
+    - default: ""
+      envKey: NATFRP_REMOTE
+      edit: true
+      label:
+        en: Remote Node Configuration
+        zh: 远程节点配置
+        zh-Hant: 遠程節點配置
+      required: true
+      type: text
+      description:
+        en: "Format: node_id:tunnel_id (e.g. 123:456)"
+        zh: "格式：节点ID:隧道ID（例如 123:456）"
+        zh-Hant: "格式：節點ID:隧道ID（例如 123:456）"
+
+    - default: 8080
+      envKey: UPSTREAM_PORT
+      edit: true
+      label:
+        en: Upstream Service Port
+        zh: 上游服务端口
+        zh-Hant: 上游服務端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: The HTTP port of mytesla-selfhost service (default 8080)
+        zh: mytesla-selfhost 服务的 HTTP 端口（默认 8080）
+        zh-Hant: mytesla-selfhost 服務的 HTTP 端口（預設 8080）
+
+    - default: Asia/Shanghai
+      envKey: TZ
+      label:
+        en: Timezone
+        zh: 时区
+        zh-Hant: 時區
+      required: true
+      type: select
+      values:
+        - label: Asia/Shanghai
+          value: Asia/Shanghai
+        - label: UTC
+          value: UTC
+        - label: America/New_York
+          value: America/New_York
+        - label: Europe/London
+          value: Europe/London
+        - label: Europe/Berlin
+          value: Europe/Berlin
+        - label: Asia/Tokyo
+          value: Asia/Tokyo

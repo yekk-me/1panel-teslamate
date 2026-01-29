@@ -1,0 +1,52 @@
+additionalProperties:
+  formFields:
+    - default: ""
+      envKey: CLOUDFLARE_TUNNEL_TOKEN
+      edit: true
+      label:
+        en: Cloudflare Tunnel Token
+        zh: Cloudflare Tunnel 令牌
+        zh-Hant: Cloudflare Tunnel 令牌
+      required: true
+      type: password
+      description:
+        en: Get from Cloudflare Zero Trust Dashboard -> Networks -> Tunnels
+        zh: 从 Cloudflare Zero Trust 面板 -> 网络 -> 隧道 获取
+        zh-Hant: 從 Cloudflare Zero Trust 面板 -> 網路 -> 隧道 獲取
+
+    - default: 8080
+      envKey: UPSTREAM_PORT
+      edit: true
+      label:
+        en: Upstream Service Port
+        zh: 上游服务端口
+        zh-Hant: 上游服務端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: The HTTP port of mytesla-selfhost service (default 8080)
+        zh: mytesla-selfhost 服务的 HTTP 端口（默认 8080）
+        zh-Hant: mytesla-selfhost 服務的 HTTP 端口（預設 8080）
+
+    - default: Asia/Shanghai
+      envKey: TZ
+      label:
+        en: Timezone
+        zh: 时区
+        zh-Hant: 時區
+      required: true
+      type: select
+      values:
+        - label: Asia/Shanghai
+          value: Asia/Shanghai
+        - label: UTC
+          value: UTC
+        - label: America/New_York
+          value: America/New_York
+        - label: Europe/London
+          value: Europe/London
+        - label: Europe/Berlin
+          value: Europe/Berlin
+        - label: Asia/Tokyo
+          value: Asia/Tokyo

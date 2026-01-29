@@ -16,26 +16,14 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.auth.loadbalancer.server.port=8080"
-      # Login/Logout/Settings routes - HTTP
+      # Login/Logout routes
       - "traefik.http.routers.auth-login.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
       - "traefik.http.routers.auth-login.entrypoints=web"
       - "traefik.http.routers.auth-login.priority=100"
-      # Login/Logout/Settings routes - HTTPS
-      - "traefik.http.routers.auth-login-tls.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
-      - "traefik.http.routers.auth-login-tls.entrypoints=websecure"
-      - "traefik.http.routers.auth-login-tls.priority=100"
-      - "traefik.http.routers.auth-login-tls.tls=true"
-      - "traefik.http.routers.auth-login-tls.tls.certresolver=letsencrypt"
-      # Settings route - HTTP
+      # Settings route
       - "traefik.http.routers.auth-settings.rule=PathPrefix(`/settings`)"
       - "traefik.http.routers.auth-settings.entrypoints=web"
       - "traefik.http.routers.auth-settings.priority=100"
-      # Settings route - HTTPS
-      - "traefik.http.routers.auth-settings-tls.rule=PathPrefix(`/settings`)"
-      - "traefik.http.routers.auth-settings-tls.entrypoints=websecure"
-      - "traefik.http.routers.auth-settings-tls.priority=100"
-      - "traefik.http.routers.auth-settings-tls.tls=true"
-      - "traefik.http.routers.auth-settings-tls.tls.certresolver=letsencrypt"
       # ForwardAuth middleware definition
       - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:8080/auth"
       - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-Forwarded-User"
@@ -49,24 +37,13 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      # Let's Encrypt ACME configuration
-      - --certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --log.level=INFO
     ports:
-      - "${PANEL_APP_PORT_HTTP:-80}:80"
-      - "${PANEL_APP_PORT_HTTPS:-443}:443"
+      - "${PANEL_APP_PORT_HTTP:-8080}:80"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./data/traefik/letsencrypt:/letsencrypt
     labels:
       - "traefik.enable=true"
-      # HTTP to HTTPS redirect
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
     depends_on:
       - auth
 
@@ -98,42 +75,21 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
-      # Public routes (no auth) - HTTP
+      # Public routes (no auth) - static assets
       - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
       - "traefik.http.routers.teslamate-public.entrypoints=web"
-      - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip,static-cache"
       - "traefik.http.routers.teslamate-public.priority=20"
-      # WebSocket routes (no auth) - HTTP
+      # WebSocket routes (no auth)
       - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
       - "traefik.http.routers.teslamate-ws.entrypoints=web"
       - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
       - "traefik.http.routers.teslamate-ws.priority=15"
-      # Protected routes (with ForwardAuth) - HTTP
+      # Protected routes (with ForwardAuth)
       - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
       - "traefik.http.routers.teslamate.entrypoints=web"
       - "traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip"
       - "traefik.http.routers.teslamate.priority=10"
-      # Public routes (no auth) - HTTPS
-      - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathRegexp(`^/teslamate/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|css|js)$$`)"
-      - "traefik.http.routers.teslamate-public-tls.entrypoints=websecure"
-      - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate-public-tls.tls=true"
-      - "traefik.http.routers.teslamate-public-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.teslamate-public-tls.priority=20"
-      # WebSocket routes (no auth) - HTTPS
-      - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
-      - "traefik.http.routers.teslamate-ws-tls.entrypoints=websecure"
-      - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate-ws-tls.tls=true"
-      - "traefik.http.routers.teslamate-ws-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.teslamate-ws-tls.priority=15"
-      # Protected routes (with ForwardAuth) - HTTPS
-      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
-      - "traefik.http.routers.teslamate-tls.entrypoints=websecure"
-      - "traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip"
-      - "traefik.http.routers.teslamate-tls.tls=true"
-      - "traefik.http.routers.teslamate-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.teslamate-tls.priority=10"
 
   database:
     image: docker.1ms.run/postgres:17.7
@@ -169,14 +125,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      # Grafana routes - HTTP
       - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
       - "traefik.http.routers.grafana.entrypoints=web"
-      # Grafana routes - HTTPS
-      - "traefik.http.routers.grafana-tls.rule=PathPrefix(`/grafana`)"
-      - "traefik.http.routers.grafana-tls.entrypoints=websecure"
-      - "traefik.http.routers.grafana-tls.tls=true"
-      - "traefik.http.routers.grafana-tls.tls.certresolver=letsencrypt"
 
   mosquitto:
     image: docker.1ms.run/eclipse-mosquitto:2
@@ -188,7 +138,7 @@ services:
       - ./data/mosquitto/data:/mosquitto/data
 
   teslamateapi:
-    image: docker.1ms.run/mytesla/teslamateapi:testflight
+    image: docker.1ms.run/mytesla/teslamateapi:latest
     container_name: ${CONTAINER_NAME}-teslamateapi
     restart: unless-stopped
     depends_on:
@@ -203,7 +153,6 @@ services:
       - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
       - MQTT_HOST=mosquitto
       - TZ=${TZ}
-      - API_TOKEN=${API_TOKEN}
     volumes:
       - teslamateapi-data:/opt/app/data
       - /tmp/current_ip:/host/current_ip:ro
@@ -212,28 +161,9 @@ services:
       - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.regex=^/panel(.*)"
       - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.replacement=/api/panel$${1}"
-      - "traefik.http.middlewares.teslamateapi-api-rewrite.replacepathregex.regex=^/mytess/api(.*)"
-      - "traefik.http.middlewares.teslamateapi-api-rewrite.replacepathregex.replacement=/api$${1}"
-      # Public API routes - HTTP
-      - "traefik.http.routers.teslamateapi-public.rule=PathPrefix(`/mytess/api`)"
-      - "traefik.http.routers.teslamateapi-public.entrypoints=web"
-      - "traefik.http.routers.teslamateapi-public.middlewares=teslamateapi-api-rewrite"
-      # Public API routes - HTTPS
-      - "traefik.http.routers.teslamateapi-public-tls.rule=PathPrefix(`/mytess/api`)"
-      - "traefik.http.routers.teslamateapi-public-tls.entrypoints=websecure"
-      - "traefik.http.routers.teslamateapi-public-tls.tls=true"
-      - "traefik.http.routers.teslamateapi-public-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.teslamateapi-public-tls.middlewares=teslamateapi-api-rewrite"
-      # Panel routes - HTTP
       - "traefik.http.routers.teslamateapi-panel.rule=PathPrefix(`/panel`)"
       - "traefik.http.routers.teslamateapi-panel.entrypoints=web"
       - "traefik.http.routers.teslamateapi-panel.middlewares=teslamateapi-panel-rewrite"
-      # Panel routes - HTTPS
-      - "traefik.http.routers.teslamateapi-panel-tls.rule=PathPrefix(`/panel`)"
-      - "traefik.http.routers.teslamateapi-panel-tls.entrypoints=websecure"
-      - "traefik.http.routers.teslamateapi-panel-tls.tls=true"
-      - "traefik.http.routers.teslamateapi-panel-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.teslamateapi-panel-tls.middlewares=teslamateapi-panel-rewrite"
 
   dash:
     image: docker.1ms.run/mytesla/dash:latest
@@ -247,28 +177,27 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.dash.loadbalancer.server.port=3000"
-      # Public routes (no auth) - PWA assets - HTTP
-      - "traefik.http.routers.dash-public.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
+      # Static cache middleware for performance
+      - "traefik.http.middlewares.static-cache.headers.customresponseheaders.Cache-Control=public, max-age=31536000, immutable"
+      - "traefik.http.middlewares.pwa-cache.headers.customresponseheaders.Cache-Control=public, max-age=86400"
+      # Public routes (no auth) - PWA assets with cache
+      - "traefik.http.routers.dash-public.rule=PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|js|css|woff|woff2)$$`)"
       - "traefik.http.routers.dash-public.entrypoints=web"
+      - "traefik.http.routers.dash-public.middlewares=static-cache"
       - "traefik.http.routers.dash-public.priority=20"
-      # Public routes (no auth) - PWA assets - HTTPS
-      - "traefik.http.routers.dash-public-tls.rule=Path(`/manifest.json`) || PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp)$$`)"
-      - "traefik.http.routers.dash-public-tls.entrypoints=websecure"
-      - "traefik.http.routers.dash-public-tls.tls=true"
-      - "traefik.http.routers.dash-public-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dash-public-tls.priority=20"
-      # Protected routes (with ForwardAuth) - HTTP
+      # PWA manifest with shorter cache
+      - "traefik.http.routers.dash-manifest.rule=Path(`/manifest.json`)"
+      - "traefik.http.routers.dash-manifest.entrypoints=web"
+      - "traefik.http.routers.dash-manifest.middlewares=pwa-cache"
+      - "traefik.http.routers.dash-manifest.priority=25"
+      # Redirect middleware
+      - "traefik.http.middlewares.dash-redirect.redirectregex.regex=^/$$"
+      - "traefik.http.middlewares.dash-redirect.redirectregex.replacement=/dashboard"
+      # Protected routes (with ForwardAuth)
       - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
       - "traefik.http.routers.dash.entrypoints=web"
-      - "traefik.http.routers.dash.middlewares=forward-auth"
+      - "traefik.http.routers.dash.middlewares=forward-auth,dash-redirect"
       - "traefik.http.routers.dash.priority=1"
-      # Protected routes (with ForwardAuth) - HTTPS
-      - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.dash-tls.entrypoints=websecure"
-      - "traefik.http.routers.dash-tls.tls=true"
-      - "traefik.http.routers.dash-tls.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dash-tls.middlewares=forward-auth"
-      - "traefik.http.routers.dash-tls.priority=1"
 
   env-adapter:
     image: docker.1ms.run/mytesla/env-adapter:latest

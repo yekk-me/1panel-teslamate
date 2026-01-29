@@ -1,0 +1,14 @@
+additionalProperties:
+  key: mytesla-cloudflared
+  name: Mytesla Cloudflared
+  tags:
+    - Tool
+  description:
+    en: Cloudflare Tunnel for Mytesla Self Host (provides HTTPS access without public IP)
+    zh: Mytesla 内网穿透接入层（Cloudflare Tunnel，无需公网 IP）
+    zh-Hant: Mytesla 內網穿透接入層（Cloudflare Tunnel，無需公網 IP）
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  website: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+  document: https://manual.mytesla.cc/

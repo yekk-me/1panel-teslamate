@@ -4,9 +4,9 @@ additionalProperties:
   tags:
     - Tool
   description:
-    en: A self-hosted data logger for Tesla vehicles with Cloudflare tunnel
-    zh: 特斯拉车辆数据记录器（Cloudflare 内网穿透版）
-    zh-Hant: 特斯拉車輛數據記錄器（Cloudflare 內網穿透版）
+    en: A self-hosted data logger for Tesla vehicles (HTTP service, use with cloudflared/traefik-ssl for HTTPS)
+    zh: 特斯拉车辆数据记录器（HTTP 服务，需配合接入层应用使用）
+    zh-Hant: 特斯拉車輛數據記錄器（HTTP 服務，需配合接入層應用使用）
   type: tool
   crossVersionUpdate: false
   limit: 0

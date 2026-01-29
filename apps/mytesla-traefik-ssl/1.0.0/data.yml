@@ -1,0 +1,97 @@
+additionalProperties:
+  formFields:
+    - default: ""
+      envKey: DOMAIN
+      edit: true
+      label:
+        en: Domain Name
+        zh: 域名
+        zh-Hant: 域名
+      required: true
+      rule: paramCommon
+      type: text
+      description:
+        en: "Your domain (e.g. mytesla.example.com). Must point to this server's public IP."
+        zh: "你的域名（例如 mytesla.example.com）。必须解析到本服务器的公网 IP。"
+        zh-Hant: "你的域名（例如 mytesla.example.com）。必須解析到本伺服器的公網 IP。"
+
+    - default: ""
+      envKey: LETSENCRYPT_EMAIL
+      edit: true
+      label:
+        en: Let's Encrypt Email
+        zh: Let's Encrypt 邮箱
+        zh-Hant: Let's Encrypt 郵箱
+      required: true
+      type: text
+      description:
+        en: Email for Let's Encrypt certificate notifications
+        zh: 用于接收 Let's Encrypt 证书通知的邮箱
+        zh-Hant: 用於接收 Let's Encrypt 證書通知的郵箱
+
+    - default: 8080
+      envKey: UPSTREAM_PORT
+      edit: true
+      label:
+        en: Upstream Service Port
+        zh: 上游服务端口
+        zh-Hant: 上游服務端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: The HTTP port of mytesla-selfhost service (default 8080)
+        zh: mytesla-selfhost 服务的 HTTP 端口（默认 8080）
+        zh-Hant: mytesla-selfhost 服務的 HTTP 端口（預設 8080）
+
+    - default: 80
+      envKey: PANEL_APP_PORT_HTTP
+      edit: true
+      label:
+        en: HTTP Port
+        zh: HTTP 端口
+        zh-Hant: HTTP 端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: HTTP port for Let's Encrypt challenge (default 80)
+        zh: 用于 Let's Encrypt 验证的 HTTP 端口（默认 80）
+        zh-Hant: 用於 Let's Encrypt 驗證的 HTTP 端口（預設 80）
+
+    - default: 443
+      envKey: PANEL_APP_PORT_HTTPS
+      edit: true
+      label:
+        en: HTTPS Port
+        zh: HTTPS 端口
+        zh-Hant: HTTPS 端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: HTTPS port for secure access (default 443)
+        zh: 用于安全访问的 HTTPS 端口（默认 443）
+        zh-Hant: 用於安全訪問的 HTTPS 端口（預設 443）
+
+    - default: Asia/Shanghai
+      envKey: TZ
+      label:
+        en: Timezone
+        zh: 时区
+        zh-Hant: 時區
+      required: true
+      type: select
+      values:
+        - label: Asia/Shanghai
+          value: Asia/Shanghai
+        - label: UTC
+          value: UTC
+        - label: America/New_York
+          value: America/New_York
+        - label: Europe/London
+          value: Europe/London
+        - label: Europe/Berlin
+          value: Europe/Berlin
+        - label: Asia/Tokyo
+          value: Asia/Tokyo

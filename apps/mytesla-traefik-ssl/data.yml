@@ -1,0 +1,14 @@
+additionalProperties:
+  key: mytesla-traefik-ssl
+  name: Mytesla Traefik SSL
+  tags:
+    - Tool
+  description:
+    en: Traefik reverse proxy with Let's Encrypt SSL for Mytesla Self Host (requires public IP)
+    zh: Mytesla SSL 接入层（Traefik + Let's Encrypt，需要公网 IP）
+    zh-Hant: Mytesla SSL 接入層（Traefik + Let's Encrypt，需要公網 IP）
+  type: tool
+  crossVersionUpdate: true
+  limit: 0
+  website: https://traefik.io/
+  document: https://manual.mytesla.cc/
