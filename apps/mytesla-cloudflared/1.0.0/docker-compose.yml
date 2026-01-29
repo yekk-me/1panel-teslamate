@@ -5,12 +5,7 @@ services:
     image: docker.1ms.run/cloudflare/cloudflared:latest
     container_name: ${CONTAINER_NAME}
     restart: unless-stopped
+    network_mode: host
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     environment:
       - TZ=${TZ}
-
-networks:
-  default:
-    name: ${CONTAINER_NAME}-network

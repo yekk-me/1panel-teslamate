@@ -29,21 +29,6 @@ additionalProperties:
         zh: "可选。用于远程管理 SakuraFrp 启动器的密码"
         zh-Hant: "可選。用於遠程管理 SakuraFrp 啟動器的密碼"
 
-    - default: 7102
-      envKey: PANEL_APP_PORT_HTTP
-      edit: true
-      label:
-        en: Launcher Web Panel Port
-        zh: 启动器管理面板端口
-        zh-Hant: 啟動器管理面板端口
-      required: true
-      rule: paramPort
-      type: number
-      description:
-        en: SakuraFrp Launcher web panel port for managing tunnels
-        zh: SakuraFrp 启动器 Web 管理面板端口，用于管理隧道
-        zh-Hant: SakuraFrp 啟動器 Web 管理面板端口，用於管理隧道
-
     - default: Asia/Shanghai
       envKey: TZ
       label:

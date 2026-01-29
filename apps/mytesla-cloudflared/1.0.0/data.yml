@@ -14,21 +14,6 @@ additionalProperties:
         zh: 从 Cloudflare Zero Trust 面板 -> 网络 -> 隧道 获取
         zh-Hant: 從 Cloudflare Zero Trust 面板 -> 網路 -> 隧道 獲取
 
-    - default: 8080
-      envKey: UPSTREAM_PORT
-      edit: true
-      label:
-        en: Upstream Service Port
-        zh: 上游服务端口
-        zh-Hant: 上游服務端口
-      required: true
-      rule: paramPort
-      type: number
-      description:
-        en: The HTTP port of mytesla-selfhost service (default 8080)
-        zh: mytesla-selfhost 服务的 HTTP 端口（默认 8080）
-        zh-Hant: mytesla-selfhost 服務的 HTTP 端口（預設 8080）
-
     - default: Asia/Shanghai
       envKey: TZ
       label:

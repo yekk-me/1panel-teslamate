@@ -24,18 +24,18 @@ Sakura FRP 内网穿透接入层，用于为 mytesla-selfhost 提供外网访问
 1. 安装完成后，访问 `http://服务器IP:7102` 打开启动器管理面板
 2. 在 SakuraFrp 官网创建隧道：
    - 隧道类型：HTTP(S)
-   - 本地地址：`host.docker.internal`
+   - 本地地址：`localhost` 或 `127.0.0.1`
    - 本地端口：`8080`（与 mytesla-selfhost 的 HTTP 端口一致）
 3. 在启动器管理面板中启用该隧道
 
 ## 架构说明
 
 ```
-互联网 -> SakuraFrp 节点 -> 启动器 -> host.docker.internal:8080 -> mytesla-selfhost
+互联网 -> SakuraFrp 节点 -> 启动器 -> localhost:8080 -> mytesla-selfhost
 ```
 
 ## 注意事项
 
 - 启动器 Web 面板默认端口 7102
-- 通过 `host.docker.internal` 连接宿主机上的 mytesla-selfhost 服务
+- 使用 host 网络模式，直接通过 `localhost` 访问宿主机上的 mytesla-selfhost 服务
 - 隧道配置在 SakuraFrp 官网进行，启动器负责连接
