@@ -20,10 +20,18 @@ services:
       - "traefik.http.routers.auth-login.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
       - "traefik.http.routers.auth-login.entrypoints=web"
       - "traefik.http.routers.auth-login.priority=100"
+      - "traefik.http.routers.auth-login-tls.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
+      - "traefik.http.routers.auth-login-tls.entrypoints=web"
+      - "traefik.http.routers.auth-login-tls.priority=100"
+      - "traefik.http.routers.auth-login-tls.tls=true"
       # Settings route
       - "traefik.http.routers.auth-settings.rule=PathPrefix(`/settings`)"
       - "traefik.http.routers.auth-settings.entrypoints=web"
       - "traefik.http.routers.auth-settings.priority=100"
+      - "traefik.http.routers.auth-settings-tls.rule=PathPrefix(`/settings`)"
+      - "traefik.http.routers.auth-settings-tls.entrypoints=web"
+      - "traefik.http.routers.auth-settings-tls.priority=100"
+      - "traefik.http.routers.auth-settings-tls.tls=true"
       # ForwardAuth middleware definition
       - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:8080/auth"
       - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-Forwarded-User"
@@ -37,6 +45,7 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
+      - --entrypoints.web.http2.maxConcurrentStreams=250
       - --log.level=INFO
     ports:
       - "${PANEL_APP_PORT_HTTP:-8080}:80"
@@ -80,16 +89,31 @@ services:
       - "traefik.http.routers.teslamate-public.entrypoints=web"
       - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip,static-cache"
       - "traefik.http.routers.teslamate-public.priority=20"
+      - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
+      - "traefik.http.routers.teslamate-public-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip,static-cache"
+      - "traefik.http.routers.teslamate-public-tls.tls=true"
+      - "traefik.http.routers.teslamate-public-tls.priority=20"
       # WebSocket routes (no auth)
       - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
       - "traefik.http.routers.teslamate-ws.entrypoints=web"
       - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
       - "traefik.http.routers.teslamate-ws.priority=15"
+      - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-ws-tls.tls=true"
+      - "traefik.http.routers.teslamate-ws-tls.priority=15"
       # Protected routes (with ForwardAuth)
       - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
       - "traefik.http.routers.teslamate.entrypoints=web"
       - "traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip"
       - "traefik.http.routers.teslamate.priority=10"
+      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-tls.tls=true"
+      - "traefik.http.routers.teslamate-tls.priority=10"
 
   database:
     image: docker.1ms.run/postgres:18-trixie
@@ -127,6 +151,9 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
       - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana-tls.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.tls=true"
 
   mosquitto:
     image: docker.1ms.run/eclipse-mosquitto:2
@@ -166,12 +193,20 @@ services:
       - "traefik.http.routers.teslamateapi-panel.rule=PathPrefix(`/panel`)"
       - "traefik.http.routers.teslamateapi-panel.entrypoints=web"
       - "traefik.http.routers.teslamateapi-panel.middlewares=teslamateapi-panel-rewrite"
+      - "traefik.http.routers.teslamateapi-panel-tls.rule=PathPrefix(`/panel`)"
+      - "traefik.http.routers.teslamateapi-panel-tls.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-panel-tls.tls=true"
+      - "traefik.http.routers.teslamateapi-panel-tls.middlewares=teslamateapi-panel-rewrite"
       # /mytess/api -> /api rewrite (TeslaMateAPI)
       - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.regex=^/mytess/api(.*)"
       - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.replacement=/api$${1}"
       - "traefik.http.routers.teslamateapi.rule=PathPrefix(`/mytess/api`)"
       - "traefik.http.routers.teslamateapi.entrypoints=web"
       - "traefik.http.routers.teslamateapi.middlewares=teslamateapi-rewrite"
+      - "traefik.http.routers.teslamateapi-tls.rule=PathPrefix(`/mytess/api`)"
+      - "traefik.http.routers.teslamateapi-tls.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-tls.tls=true"
+      - "traefik.http.routers.teslamateapi-tls.middlewares=teslamateapi-rewrite"
 
   dash:
     image: docker.1ms.run/mytesla/dash:latest
@@ -193,11 +228,21 @@ services:
       - "traefik.http.routers.dash-public.entrypoints=web"
       - "traefik.http.routers.dash-public.middlewares=static-cache"
       - "traefik.http.routers.dash-public.priority=20"
+      - "traefik.http.routers.dash-public-tls.rule=PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|js|css|woff|woff2)$$`)"
+      - "traefik.http.routers.dash-public-tls.entrypoints=web"
+      - "traefik.http.routers.dash-public-tls.middlewares=static-cache"
+      - "traefik.http.routers.dash-public-tls.tls=true"
+      - "traefik.http.routers.dash-public-tls.priority=20"
       # PWA manifest with shorter cache
       - "traefik.http.routers.dash-manifest.rule=Path(`/manifest.json`)"
       - "traefik.http.routers.dash-manifest.entrypoints=web"
       - "traefik.http.routers.dash-manifest.middlewares=pwa-cache"
       - "traefik.http.routers.dash-manifest.priority=25"
+      - "traefik.http.routers.dash-manifest-tls.rule=Path(`/manifest.json`)"
+      - "traefik.http.routers.dash-manifest-tls.entrypoints=web"
+      - "traefik.http.routers.dash-manifest-tls.middlewares=pwa-cache"
+      - "traefik.http.routers.dash-manifest-tls.tls=true"
+      - "traefik.http.routers.dash-manifest-tls.priority=25"
       # Redirect middleware
       - "traefik.http.middlewares.dash-redirect.redirectregex.regex=^/$$"
       - "traefik.http.middlewares.dash-redirect.redirectregex.replacement=/dashboard"
@@ -206,6 +251,11 @@ services:
       - "traefik.http.routers.dash.entrypoints=web"
       - "traefik.http.routers.dash.middlewares=forward-auth,dash-redirect"
       - "traefik.http.routers.dash.priority=1"
+      - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash-tls.entrypoints=web"
+      - "traefik.http.routers.dash-tls.tls=true"
+      - "traefik.http.routers.dash-tls.middlewares=forward-auth,dash-redirect"
+      - "traefik.http.routers.dash-tls.priority=1"
 
   env-adapter:
     image: docker.1ms.run/mytesla/env-adapter:latest
