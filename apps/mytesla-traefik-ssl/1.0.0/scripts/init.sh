@@ -1,5 +1,33 @@
 #!/bin/bash
 
+# --- 加载 .env 文件中的环境变量 ---
+if [ -f .env ]; then
+    echo "正在加载环境变量..."
+    set -a
+    source .env
+    set +a
+else
+    echo "错误：找不到 .env 文件"
+    exit 1
+fi
+
+# --- 检查必需的环境变量 ---
+if [ -z "${DOMAIN}" ]; then
+    echo "错误：DOMAIN 环境变量未设置！"
+    echo "请在 1Panel 应用配置中设置域名。"
+    exit 1
+fi
+
+if [ -z "${UPSTREAM_PORT}" ]; then
+    echo "警告：UPSTREAM_PORT 未设置，使用默认值 8080"
+    UPSTREAM_PORT=8080
+fi
+
+echo "配置信息："
+echo "  域名: ${DOMAIN}"
+echo "  上游端口: ${UPSTREAM_PORT}"
+echo ""
+
 # --- 创建必要的数据目录 ---
 echo "正在创建数据目录..."
 mkdir -p ./data/traefik/letsencrypt
