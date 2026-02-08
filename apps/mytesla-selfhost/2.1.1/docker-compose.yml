@@ -73,8 +73,7 @@ services:
       - TZ=${TZ}
       - CHECK_ORIGIN=false
       - URL_PATH=/teslamate
-      - BD_MAP_AK=${BD_MAP_AK}
-      - BD_MAP_SK=${BD_MAP_SK}
+      - AMAP_API_KEY=${AMAP_API_KEY}
       - MYTESLA_SELF_HOST=true
     volumes:
       - ./data/teslamate/import:/opt/app/import
