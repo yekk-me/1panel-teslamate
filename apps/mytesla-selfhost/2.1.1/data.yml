@@ -171,7 +171,7 @@ additionalProperties:
         zh-Hant: 可選配置。用於 Dash 地圖顯示。
 
     - default: ""
-      envKey: AMAP_KEY
+      envKey: AMAP_API_KEY
       edit: true
       label:
         en: Gaode Map Key
