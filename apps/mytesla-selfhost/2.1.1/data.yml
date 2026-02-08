@@ -171,29 +171,16 @@ additionalProperties:
         zh-Hant: 可選配置。用於 Dash 地圖顯示。
 
     - default: ""
-      envKey: BD_MAP_AK
+      envKey: AMAP_KEY
       edit: true
       label:
-        en: Baidu Map AK (Access Key)
-        zh: 百度地图 AK (访问密钥)
-        zh-Hant: 百度地圖 AK (訪問密鑰)
+        en: Gaode Map Key
+        zh: 高德地图 Key
+        zh-Hant: 高德地圖 Key
       required: false
       type: text
       description:
-        en: Optional. Configure for more accurate location information.
-        zh: 可选配置。配置后可获得更精准的位置信息。
-        zh-Hant: 可選配置。配置後可獲得更精準的位置信息。
+        en: Optional. Used for Dash map display.
+        zh: 可选配置。用于逆地址解析。
+        zh-Hant: 可選配置。用于逆地址解析。
 
-    - default: ""
-      envKey: BD_MAP_SK
-      edit: true
-      label:
-        en: Baidu Map SK (Secret Key)
-        zh: 百度地图 SK (安全密钥)
-        zh-Hant: 百度地圖 SK (安全密鑰)
-      required: false
-      type: password
-      description:
-        en: Optional. Required when using Baidu Map AK.
-        zh: 可选配置。使用百度地图 AK 时需要配置。
-        zh-Hant: 可選配置。使用百度地圖 AK 時需要配置。
