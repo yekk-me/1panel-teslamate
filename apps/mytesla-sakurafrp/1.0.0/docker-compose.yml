@@ -1,18 +1,28 @@
-version: "3"
-
 services:
-  sakurafrp:
-    image: natfrp.com/launcher:latest
-    container_name: ${CONTAINER_NAME}
-    restart: always
-    network_mode: host
-    environment:
-      LANG: zh_CN.UTF-8
-      TZ: ${TZ}
-      NATFRP_TOKEN: ${NATFRP_TOKEN}
-      NATFRP_REMOTE: ${NATFRP_REMOTE}
-    volumes:
-      - sakurafrp-data:/run
+    mytesla-sakurafrp:
+        container_name: ${CONTAINER_NAME}
+        image: natfrp.com/launcher:latest
+        restart: always
+        network_mode: host
+        entrypoint: 
+          - sh
+          - -c
+          - |
+            echo "Wait-for-it: 正在检测 127.0.0.1:8080..."
+            while ! nc -z 127.0.0.1 8080; do
+              echo "8080 端口未就绪，5秒后重试..."
+              sleep 5
+            done
+            echo "8080 端口已响应！正在启动 SakuraFrp..."
+            exec /run.sh
+        environment:
+            LANG: zh_CN.UTF-8
+            NATFRP_REMOTE: ${NATFRP_REMOTE}
+            NATFRP_TOKEN: ${NATFRP_TOKEN}
+            TZ: ${TZ}
+        volumes:
+            - sakurafrp-data:/run
 
+version: "3"
 volumes:
-  sakurafrp-data:
+    sakurafrp-data: null
