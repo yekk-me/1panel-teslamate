@@ -1,0 +1,294 @@
+version: "3"
+
+services:
+  # ForwardAuth service for Cookie-based authentication
+  auth:
+    image: docker.1ms.run/mytesla/auth:latest
+    container_name: ${CONTAINER_NAME}-auth
+    restart: unless-stopped
+    environment:
+      - AUTH_USERNAME=${BASIC_AUTH_USER}
+      - AUTH_PASSWORD=${BASIC_AUTH_PASS}
+      - SECRET_KEY=${AUTH_SECRET_KEY}
+      - CONFIG_PATH=/data/config.json
+    volumes:
+      - auth-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+      # Login/Logout routes
+      - "traefik.http.routers.auth-login.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
+      - "traefik.http.routers.auth-login.entrypoints=web"
+      - "traefik.http.routers.auth-login.priority=100"
+      - "traefik.http.routers.auth-login-tls.rule=PathPrefix(`/login`) || PathPrefix(`/logout`)"
+      - "traefik.http.routers.auth-login-tls.entrypoints=web"
+      - "traefik.http.routers.auth-login-tls.priority=100"
+      - "traefik.http.routers.auth-login-tls.tls=true"
+      # Settings route
+      - "traefik.http.routers.auth-settings.rule=PathPrefix(`/settings`)"
+      - "traefik.http.routers.auth-settings.entrypoints=web"
+      - "traefik.http.routers.auth-settings.priority=100"
+      - "traefik.http.routers.auth-settings-tls.rule=PathPrefix(`/settings`)"
+      - "traefik.http.routers.auth-settings-tls.entrypoints=web"
+      - "traefik.http.routers.auth-settings-tls.priority=100"
+      - "traefik.http.routers.auth-settings-tls.tls=true"
+      # ForwardAuth middleware definition
+      - "traefik.http.middlewares.forward-auth.forwardauth.address=http://auth:8080/auth"
+      - "traefik.http.middlewares.forward-auth.forwardauth.authResponseHeaders=X-Forwarded-User"
+
+  traefik:
+    image: docker.1ms.run/traefik:v3.6
+    container_name: ${CONTAINER_NAME}-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http2.maxConcurrentStreams=250
+      - --log.level=INFO
+    ports:
+      - "${PANEL_APP_PORT_HTTP:-8080}:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+    depends_on:
+      - auth
+
+  sakurafrp:
+    image: natfrp.com/launcher:latest
+    container_name: ${CONTAINER_NAME}-sakurafrp
+    restart: always
+    environment:
+      LANG: zh_CN.UTF-8
+      NATFRP_REMOTE: ${NATFRP_REMOTE}
+      NATFRP_TOKEN: ${NATFRP_TOKEN}
+      TZ: ${TZ}
+    volumes:
+      - sakurafrp-data:/run
+    depends_on:
+      - traefik
+
+  teslamate:
+    image: docker.1ms.run/mytesla/teslamate:v2.2
+    container_name: ${CONTAINER_NAME}
+    restart: always
+    depends_on:
+      - database
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - TZ=${TZ}
+      - CHECK_ORIGIN=false
+      - URL_PATH=/teslamate
+      - AMAP_API_KEY=${AMAP_API_KEY}
+      - MYTESLA_SELF_HOST=true
+    volumes:
+      - ./data/teslamate/import:/opt/app/import
+    cap_drop:
+      - all
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
+      - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
+      # Public routes (no auth) - static assets
+      - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
+      - "traefik.http.routers.teslamate-public.entrypoints=web"
+      - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip,static-cache"
+      - "traefik.http.routers.teslamate-public.priority=20"
+      - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
+      - "traefik.http.routers.teslamate-public-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip,static-cache"
+      - "traefik.http.routers.teslamate-public-tls.tls=true"
+      - "traefik.http.routers.teslamate-public-tls.priority=20"
+      # WebSocket routes (no auth)
+      - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-ws.priority=15"
+      - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
+      - "traefik.http.routers.teslamate-ws-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
+      - "traefik.http.routers.teslamate-ws-tls.tls=true"
+      - "traefik.http.routers.teslamate-ws-tls.priority=15"
+      # Protected routes (with ForwardAuth)
+      - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate.entrypoints=web"
+      - "traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate.priority=10"
+      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
+      - "traefik.http.routers.teslamate-tls.entrypoints=web"
+      - "traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip"
+      - "traefik.http.routers.teslamate-tls.tls=true"
+      - "traefik.http.routers.teslamate-tls.priority=10"
+
+  database:
+    image: docker.1ms.run/postgres:18-trixie
+    container_name: ${CONTAINER_NAME}-database
+    restart: always
+    environment:
+      - POSTGRES_USER=${TM_DB_USER}
+      - POSTGRES_PASSWORD=${TM_DB_PASS}
+      - POSTGRES_DB=${TM_DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  grafana:
+    image: docker.1ms.run/mytesla/grafana:v2.2
+    container_name: ${CONTAINER_NAME}-grafana
+    restart: always
+    depends_on:
+      - database
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - GRAFANA_PASSWD=${GRAFANA_PW}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_DEFAULT_LANGUAGE=zh-CN
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+    volumes:
+      - grafana-data:/var/lib/grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana-tls.entrypoints=web"
+      - "traefik.http.routers.grafana-tls.tls=true"
+
+  mosquitto:
+    image: docker.1ms.run/eclipse-mosquitto:2
+    container_name: ${CONTAINER_NAME}-mosquitto
+    restart: always
+    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./data/mosquitto/config:/mosquitto/config
+      - ./data/mosquitto/data:/mosquitto/data
+
+  teslamateapi:
+    image: docker.1ms.run/mytesla/teslamateapi:latest
+    container_name: ${CONTAINER_NAME}-teslamateapi
+    restart: unless-stopped
+    depends_on:
+      - database
+      - teslamate
+      - mosquitto
+    environment:
+      - DATABASE_USER=${TM_DB_USER}
+      - DATABASE_PASS=${TM_DB_PASS}
+      - DATABASE_NAME=${TM_DB_NAME}
+      - DATABASE_HOST=database
+      - ENCRYPTION_KEY=${TM_ENCRYPTION_KEY}
+      - MQTT_HOST=mosquitto
+      - TZ=${TZ}
+      - API_TOKEN=${API_TOKEN}
+    volumes:
+      - teslamateapi-data:/opt/app/data
+      - /tmp/current_ip:/host/current_ip:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.teslamateapi.loadbalancer.server.port=8080"
+      # /panel -> /api/panel rewrite
+      - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.regex=^/panel(.*)"
+      - "traefik.http.middlewares.teslamateapi-panel-rewrite.replacepathregex.replacement=/api/panel$${1}"
+      - "traefik.http.routers.teslamateapi-panel.rule=PathPrefix(`/panel`)"
+      - "traefik.http.routers.teslamateapi-panel.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-panel.middlewares=teslamateapi-panel-rewrite"
+      - "traefik.http.routers.teslamateapi-panel-tls.rule=PathPrefix(`/panel`)"
+      - "traefik.http.routers.teslamateapi-panel-tls.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-panel-tls.tls=true"
+      - "traefik.http.routers.teslamateapi-panel-tls.middlewares=teslamateapi-panel-rewrite"
+      # /mytess/api -> /api rewrite (TeslaMateAPI)
+      - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.regex=^/mytess/api(.*)"
+      - "traefik.http.middlewares.teslamateapi-rewrite.replacepathregex.replacement=/api$${1}"
+      - "traefik.http.routers.teslamateapi.rule=PathPrefix(`/mytess/api`)"
+      - "traefik.http.routers.teslamateapi.entrypoints=web"
+      - "traefik.http.routers.teslamateapi.middlewares=teslamateapi-rewrite"
+      - "traefik.http.routers.teslamateapi-tls.rule=PathPrefix(`/mytess/api`)"
+      - "traefik.http.routers.teslamateapi-tls.entrypoints=web"
+      - "traefik.http.routers.teslamateapi-tls.tls=true"
+      - "traefik.http.routers.teslamateapi-tls.middlewares=teslamateapi-rewrite"
+
+  dash:
+    image: docker.1ms.run/mytesla/dash:latest
+    container_name: ${CONTAINER_NAME}-dash
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_AMAP_KEY=${NEXT_PUBLIC_AMAP_KEY}
+    depends_on:
+      - teslamateapi
+      - env-adapter
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.dash.loadbalancer.server.port=3000"
+      # Static cache middleware for performance
+      - "traefik.http.middlewares.static-cache.headers.customresponseheaders.Cache-Control=public, max-age=31536000, immutable"
+      - "traefik.http.middlewares.pwa-cache.headers.customresponseheaders.Cache-Control=public, max-age=86400"
+      # Public routes (no auth) - PWA assets with cache
+      - "traefik.http.routers.dash-public.rule=PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|js|css|woff|woff2)$$`)"
+      - "traefik.http.routers.dash-public.entrypoints=web"
+      - "traefik.http.routers.dash-public.middlewares=static-cache"
+      - "traefik.http.routers.dash-public.priority=20"
+      - "traefik.http.routers.dash-public-tls.rule=PathPrefix(`/images`) || PathRegexp(`^/.*\\.(png|jpg|jpeg|gif|ico|svg|webp|js|css|woff|woff2)$$`)"
+      - "traefik.http.routers.dash-public-tls.entrypoints=web"
+      - "traefik.http.routers.dash-public-tls.middlewares=static-cache"
+      - "traefik.http.routers.dash-public-tls.tls=true"
+      - "traefik.http.routers.dash-public-tls.priority=20"
+      # PWA manifest with shorter cache
+      - "traefik.http.routers.dash-manifest.rule=Path(`/manifest.json`)"
+      - "traefik.http.routers.dash-manifest.entrypoints=web"
+      - "traefik.http.routers.dash-manifest.middlewares=pwa-cache"
+      - "traefik.http.routers.dash-manifest.priority=25"
+      - "traefik.http.routers.dash-manifest-tls.rule=Path(`/manifest.json`)"
+      - "traefik.http.routers.dash-manifest-tls.entrypoints=web"
+      - "traefik.http.routers.dash-manifest-tls.middlewares=pwa-cache"
+      - "traefik.http.routers.dash-manifest-tls.tls=true"
+      - "traefik.http.routers.dash-manifest-tls.priority=25"
+      # Redirect middleware
+      - "traefik.http.middlewares.dash-redirect.redirectregex.regex=^/$$"
+      - "traefik.http.middlewares.dash-redirect.redirectregex.replacement=/dashboard"
+      # Protected routes (with ForwardAuth)
+      - "traefik.http.routers.dash.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash.entrypoints=web"
+      - "traefik.http.routers.dash.middlewares=forward-auth,dash-redirect"
+      - "traefik.http.routers.dash.priority=1"
+      - "traefik.http.routers.dash-tls.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.dash-tls.entrypoints=web"
+      - "traefik.http.routers.dash-tls.tls=true"
+      - "traefik.http.routers.dash-tls.middlewares=forward-auth,dash-redirect"
+      - "traefik.http.routers.dash-tls.priority=1"
+
+  env-adapter:
+    image: docker.1ms.run/mytesla/env-adapter:latest
+    container_name: ${CONTAINER_NAME}-env-adapter
+    restart: unless-stopped
+    volumes:
+      - /etc/machine-id:/etc/machine-id:ro
+      - /proc/cpuinfo:/proc/cpuinfo:ro
+      - env-adapter-data:/app/storage:rw
+    depends_on:
+      - teslamateapi
+
+volumes:
+  auth-data:
+  teslamateapi-data:
+  grafana-data:
+  postgres-data:
+  env-adapter-data:
+  sakurafrp-data:
+
+networks:
+  default:
+    name: ${CONTAINER_NAME}-network

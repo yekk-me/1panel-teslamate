@@ -1,0 +1,214 @@
+additionalProperties:
+  formFields:
+    - default: 8080
+      envKey: PANEL_APP_PORT_HTTP
+      edit: true
+      label:
+        en: HTTP Port
+        zh: HTTP 端口
+        zh-Hant: HTTP 端口
+      required: true
+      rule: paramPort
+      type: number
+      description:
+        en: The HTTP port exposed by the service (for local access).
+        zh: 服务暴露的 HTTP 端口（用于本地访问）。
+        zh-Hant: 服務暴露的 HTTP 端口（用於本地訪問）。
+
+    - default: "admin"
+      envKey: BASIC_AUTH_USER
+      edit: true
+      label:
+        en: Mytesla Username
+        zh: Mytesla 用户名
+        zh-Hant: Mytesla 用戶名
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: "admin"
+      envKey: BASIC_AUTH_PASS
+      edit: true
+      label:
+        en: Mytesla Password
+        zh: Mytesla 密码
+        zh-Hant: Mytesla 密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: "auth_secret"
+      envKey: AUTH_SECRET_KEY
+      edit: true
+      label:
+        en: Session Secret Key
+        zh: 会话签名密钥
+        zh-Hant: 會話簽名密鑰
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+      description:
+        en: Used for signing login session cookies. Auto-generated if empty.
+        zh: 用于登录会话 Cookie 签名。留空则自动生成。
+        zh-Hant: 用於登入會話 Cookie 簽名。留空則自動生成。
+
+    - default: teslamate
+      envKey: TM_DB_NAME
+      label:
+        en: Database Name
+        zh: 数据库名
+        zh-Hant: 資料庫名稱
+      random: true
+      required: true
+      type: text
+
+    - default: teslamate
+      envKey: TM_DB_USER
+      label:
+        en: Database User
+        zh: 数据库用户
+        zh-Hant: 資料庫使用者
+      random: true
+      required: true
+      rule: paramComplexity
+      type: text
+
+    - default: teslamate
+      envKey: TM_DB_PASS
+      label:
+        en: Database Password
+        zh: 数据库密码
+        zh-Hant: 資料庫密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: "secret"
+      envKey: TM_ENCRYPTION_KEY
+      label:
+        en: Encryption Key
+        zh: 加密密钥
+        zh-Hant: 加密密鑰
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: admin
+      envKey: GRAFANA_USER
+      label:
+        en: Grafana Admin User
+        zh: Grafana 管理员用户
+        zh-Hant: Grafana 管理員用戶
+      required: true
+      rule: paramCommon
+      type: text
+
+    - default: admin
+      envKey: GRAFANA_PW
+      label:
+        en: Grafana Admin Password
+        zh: Grafana 管理员密码
+        zh-Hant: Grafana 管理員密碼
+      random: true
+      required: true
+      rule: paramComplexity
+      type: password
+
+    - default: "mytesla_"
+      envKey: API_TOKEN
+      edit: true
+      label:
+        en: TeslaMateAPI Token
+        zh: TeslaMateAPI 令牌
+        zh-Hant: TeslaMateAPI 令牌
+      random: true
+      required: false
+      rule: paramComplexity
+      type: password
+      description:
+        en: Optional. Used for TeslaMateAPI authentication (/mytess/api).
+        zh: 可选配置。用于 TeslaMateAPI 接口认证（/mytess/api）。
+        zh-Hant: 可選配置。用於 TeslaMateAPI 接口認證（/mytess/api）。
+
+    - default: Asia/Shanghai
+      envKey: TZ
+      label:
+        en: Timezone
+        zh: 时区
+        zh-Hant: 時區
+      required: true
+      type: select
+      values:
+        - label: Asia/Shanghai
+          value: Asia/Shanghai
+        - label: UTC
+          value: UTC
+        - label: America/New_York
+          value: America/New_York
+        - label: Europe/London
+          value: Europe/London
+        - label: Europe/Berlin
+          value: Europe/Berlin
+        - label: Asia/Tokyo
+          value: Asia/Tokyo
+
+    - default: ""
+      envKey: NEXT_PUBLIC_AMAP_KEY
+      edit: true
+      label:
+        en: Gaode Map Key
+        zh: 高德地图 Key
+        zh-Hant: 高德地圖 Key
+      required: false
+      type: text
+      description:
+        en: Optional. Used for Dash map display.
+        zh: 可选配置。用于 Dash 地图显示。
+        zh-Hant: 可選配置。用於 Dash 地圖顯示。
+
+    - default: ""
+      envKey: AMAP_API_KEY
+      edit: true
+      label:
+        en: Gaode Map Key
+        zh: 高德地图 Key
+        zh-Hant: 高德地圖 Key
+      required: false
+      type: text
+      description:
+        en: Optional. Used for Dash map display.
+        zh: 可选配置。用于逆地址解析。
+        zh-Hant: 可選配置。用于逆地址解析。
+
+    - default: ""
+      envKey: NATFRP_TOKEN
+      edit: true
+      label:
+        en: SakuraFrp Access Token
+        zh: SakuraFrp 访问密钥
+        zh-Hant: SakuraFrp 訪問密鑰
+      required: true
+      type: password
+      description:
+        en: Get from SakuraFrp user panel (User Info -> Access Token)
+        zh: 从 SakuraFrp 用户面板获取（用户信息 -> 访问密钥）
+        zh-Hant: 從 SakuraFrp 用戶面板獲取（用戶信息 -> 訪問密鑰）
+
+    - default: "sakura_"
+      envKey: NATFRP_REMOTE
+      edit: true
+      label:
+        en: Remote Access Password
+        zh: 远程访问密码
+        zh-Hant: 遠程訪問密碼
+      random: true
+      required: false
+      type: password
+      description:
+        en: "Optional. Password for remote management of SakuraFrp launcher"
+        zh: "可选。用于远程管理 SakuraFrp 启动器的密码"
+        zh-Hant: "可選。用於遠程管理 SakuraFrp 啟動器的密碼"

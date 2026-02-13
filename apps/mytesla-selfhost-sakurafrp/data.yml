@@ -1,0 +1,14 @@
+additionalProperties:
+  key: mytesla-selfhost-sakurafrp
+  name: Mytesla Self Host + SakuraFrp
+  tags:
+    - Tool
+  description:
+    en: Self-hosted TeslaMate with SakuraFrp tunnel (HTTPS access without public IP)
+    zh: 特斯拉车辆数据记录器 + Sakura FRP 内网穿透（无需公网 IP）
+    zh-Hant: 特斯拉車輛數據記錄器 + Sakura FRP 內網穿透（無需公網 IP）
+  type: tool
+  crossVersionUpdate: false
+  limit: 0
+  website: https://mytesla.cc/
+  document: https://manual.mytesla.cc/
