@@ -94,39 +94,32 @@ services:
     cap_drop:
       - all
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.services.teslamate.loadbalancer.server.port=4000"
-      - "traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate"
-      # Public routes (no auth) - static assets
-      - "traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
-      - "traefik.http.routers.teslamate-public.entrypoints=web"
-      - "traefik.http.routers.teslamate-public.middlewares=teslamate-strip,static-cache"
-      - "traefik.http.routers.teslamate-public.priority=20"
-      - "traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)"
-      - "traefik.http.routers.teslamate-public-tls.entrypoints=web"
-      - "traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip,static-cache"
-      - "traefik.http.routers.teslamate-public-tls.tls=true"
-      - "traefik.http.routers.teslamate-public-tls.priority=20"
-      # WebSocket routes (no auth)
-      - "traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)"
-      - "traefik.http.routers.teslamate-ws.entrypoints=web"
-      - "traefik.http.routers.teslamate-ws.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate-ws.priority=15"
-      - "traefik.http.routers.teslamate-ws-tls.rule=PathPrefix(`/teslamate/live/websocket`)"
-      - "traefik.http.routers.teslamate-ws-tls.entrypoints=web"
-      - "traefik.http.routers.teslamate-ws-tls.middlewares=teslamate-strip"
-      - "traefik.http.routers.teslamate-ws-tls.tls=true"
-      - "traefik.http.routers.teslamate-ws-tls.priority=15"
-      # Protected routes (with ForwardAuth)
-      - "traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)"
-      - "traefik.http.routers.teslamate.entrypoints=web"
-      - "traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip"
-      - "traefik.http.routers.teslamate.priority=10"
-      - "traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)"
-      - "traefik.http.routers.teslamate-tls.entrypoints=web"
-      - "traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip"
-      - "traefik.http.routers.teslamate-tls.tls=true"
-      - "traefik.http.routers.teslamate-tls.priority=10"
+      - traefik.enable=true
+      - traefik.http.services.teslamate.loadbalancer.server.port=4000
+      
+      - traefik.http.middlewares.teslamate-strip.stripprefix.prefixes=/teslamate
+
+      - traefik.http.routers.teslamate-public.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)
+      - traefik.http.routers.teslamate-public.entrypoints=web
+      - traefik.http.routers.teslamate-public.middlewares=teslamate-strip
+      - traefik.http.routers.teslamate-public.priority=100
+      
+      - traefik.http.routers.teslamate-public-tls.rule=PathPrefix(`/teslamate/static`) || PathPrefix(`/teslamate/assets`)
+      - traefik.http.routers.teslamate-public-tls.entrypoints=web
+      - traefik.http.routers.teslamate-public-tls.middlewares=teslamate-strip
+      - traefik.http.routers.teslamate-public-tls.tls=true
+      - traefik.http.routers.teslamate-public-tls.priority=100
+
+      # WebSocket 路由
+      - traefik.http.routers.teslamate-ws.rule=PathPrefix(`/teslamate/live/websocket`)
+      - traefik.http.routers.teslamate-ws.entrypoints=web
+      - traefik.http.routers.teslamate-ws.middlewares=teslamate-strip
+      - traefik.http.routers.teslamate-ws.priority=90
+
+      - traefik.http.routers.teslamate.rule=PathPrefix(`/teslamate`)
+      - traefik.http.routers.teslamate.entrypoints=web
+      - traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip
+      - traefik.http.routers.teslamate.priority=10
 
   database:
     image: docker.1ms.run/postgres:18-trixie
