@@ -57,7 +57,7 @@ services:
       - auth
 
   sakurafrp:
-    image: natfrp.com/launcher:latest
+    image: docker.1ms.run/natfrp/launcher:latest
     container_name: ${CONTAINER_NAME}-sakurafrp
     restart: always
     environment:
