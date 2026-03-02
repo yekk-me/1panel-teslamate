@@ -120,7 +120,12 @@ services:
       - traefik.http.routers.teslamate.entrypoints=web
       - traefik.http.routers.teslamate.middlewares=forward-auth,teslamate-strip
       - traefik.http.routers.teslamate.priority=10
-
+      - traefik.http.routers.teslamate-tls.rule=PathPrefix(`/teslamate`)
+      - traefik.http.routers.teslamate-tls.entrypoints=web
+      - traefik.http.routers.teslamate-tls.tls=true
+      - traefik.http.routers.teslamate-tls.middlewares=forward-auth,teslamate-strip
+      - traefik.http.routers.teslamate-tls.priority=11
+  
   database:
     image: docker.1ms.run/postgres:18-trixie
     container_name: ${CONTAINER_NAME}-database
