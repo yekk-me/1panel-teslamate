@@ -71,7 +71,7 @@ services:
       - traefik
 
   teslamate:
-    image: docker.1ms.run/mytesla/teslamate:v2.2
+    image: docker.1ms.run/mytesla/teslamate:latest
     container_name: ${CONTAINER_NAME}
     restart: always
     depends_on:
@@ -138,7 +138,7 @@ services:
       - postgres-data:/var/lib/postgresql
 
   grafana:
-    image: docker.1ms.run/mytesla/grafana:v2.2
+    image: docker.1ms.run/mytesla/grafana:latest
     container_name: ${CONTAINER_NAME}-grafana
     restart: always
     depends_on:
